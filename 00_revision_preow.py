@@ -7,6 +7,7 @@ import logging
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter, range_boundaries
 import warnings
+import sys
 
 # Suppress the specific UserWarning from openpyxl
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl.styles.stylesheet")
@@ -18,8 +19,35 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 start = time.time()
 
 # Constants
-DATE_PREV = "202409"
-DATE = "202410"
+#DATE_PREV = "202409"
+#DATE = "202410"
+
+# ask input for data in format YYYYMM
+DATE = input("Please insert date with the format yyyymm: ")
+# using DATE define DATE_PREV previous month data in format YYYYMM
+DATE_PREV = str(int(DATE) - 1)
+
+# log DATE and DATE_PREV
+logging.info(f"CURRENT DATE: {DATE} PREVIOUS MONTH: {DATE_PREV}")
+
+# for loop and ask for input to follow or to input date again
+while True:
+    follow = input("Do you want to continue with the date? (Y/N): ")
+    if follow.upper() == "Y":
+        break
+    elif follow.upper() == "N":
+        # give option to quit
+        quit = input("Do you want to quit? (Y/N): ")
+        if quit.upper() == "Y":
+            logging.info("Quitting the script")
+            sys.exit()
+        
+
+        DATE = input("Please insert date with the format yyyymm: ")
+        DATE_PREV = str(int(DATE) - 1)
+        logging.info(f"DATE: {DATE}")
+    else:
+        logging.info("Please insert Y or N")
 
 # Function to create output directory if it doesn't exist
 def create_output_directory(base_dir):
