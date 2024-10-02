@@ -81,9 +81,9 @@ def process_overwrites(year_month: str, base_dir: Path, input_file: Path):
         write_to_excel(df_filtered, file_path)
 
 def main():
+    setup_logging()
     start_time = time.time()
     logging.info("Script started")
-    setup_logging()
     base_dir = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\overwrites")
     input_file = base_dir / "BBDD_Overrides_sep24.xlsx"
 

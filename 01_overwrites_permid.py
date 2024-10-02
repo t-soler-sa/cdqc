@@ -72,7 +72,7 @@ def process_overwrites(year_month: str, base_dir: Path, input_file: Path):
     }
 
     current_month = datetime.strptime(year_month, "%Y%m").strftime('%B')
-    directory = base_dir / f"{year_month}_OVR_{current_month}"
+    directory = base_dir / f"{year_month}_OVR_{current_month}_permid"
     directory.mkdir(parents=True, exist_ok=True)
 
     for new_name, column_name in overwrites.items():
@@ -81,11 +81,11 @@ def process_overwrites(year_month: str, base_dir: Path, input_file: Path):
         write_to_excel(df_filtered, file_path)
 
 def main():
+    setup_logging()
     start_time = time.time()
     logging.info("Script started")
-    setup_logging()
     base_dir = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\overwrites")
-    input_file = base_dir / "BBDD_Overrides_sep24.xlsx"
+    input_file = base_dir / "BBDD_Overrides_oct24.xlsx"
 
     if len(sys.argv) > 1:
         year_month = sys.argv[1]
