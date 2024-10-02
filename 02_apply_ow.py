@@ -7,12 +7,6 @@ from contextlib import contextmanager
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Constants
-DATE = "202409"
-DATAFEED_PATH = Path(r'C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\raw_dataset\20240901_Production\20240901_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv')
-OW_BASE_PATH = Path(r'C:\Users\n740789\Documents\Projects_local\DataSets\overwrites\202409_OVR_September_permid')
-OUTPUT_PATH = Path(r'C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ow')
-
 # Timer context manager
 @contextmanager
 def timer(description: str):
@@ -20,6 +14,22 @@ def timer(description: str):
     yield
     elapsed_time = time.time() - start
     logging.info(f"{description} took {elapsed_time:.2f} seconds")
+
+def get_user_input():
+    while True:
+        date_input = input("Enter the date in YYYYMM format: ")
+        if len(date_input) == 6 and date_input.isdigit():
+            return date_input
+        else:
+            print("Invalid input. Please enter a 6-digit number in YYYYMM format.")
+
+# Get user input for date
+DATE = get_user_input()
+
+# Constants
+DATAFEED_PATH = Path(rf'C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\raw_dataset\{DATE}01_Production\{DATE}01_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv')
+OW_BASE_PATH = Path(rf'C:\Users\n740789\Documents\Projects_local\DataSets\overwrites\{DATE}_OVR_permid')
+OUTPUT_PATH = Path(r'C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ow')
 
 # Define overwrites
 overwrites = [
@@ -38,6 +48,7 @@ overwrites = [
 ]
 
 def load_main_dataframe():
+    logging.info("Start loading of dataframe")
     with timer("Loading main dataframe"):
         df = pd.read_csv(DATAFEED_PATH, low_memory=False)
         logging.info(f"Loaded main dataframe with shape: {df.shape}")

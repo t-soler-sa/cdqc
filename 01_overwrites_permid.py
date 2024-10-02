@@ -71,8 +71,7 @@ def process_overwrites(year_month: str, base_dir: Path, input_file: Path):
         "STR_SFDR8_AEC": "OVRARTICULO8"
     }
 
-    current_month = datetime.strptime(year_month, "%Y%m").strftime('%B')
-    directory = base_dir / f"{year_month}_OVR_{current_month}_permid"
+    directory = base_dir / f"{year_month}_OVR_permid"
     directory.mkdir(parents=True, exist_ok=True)
 
     for new_name, column_name in overwrites.items():
