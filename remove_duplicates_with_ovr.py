@@ -2,7 +2,6 @@ import pandas
 import time
 import logging
 
-
 # Set up logging info
 def setup_logging():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -10,7 +9,6 @@ setup_logging()
 # Add timer to the function
 start_time = time.time()
 logging.info("Script started")
-
 
 # Define Date
 DATE = input("Insert data in the formar YYYYMM, please: ")
@@ -22,7 +20,7 @@ INPUT_PATH = BASE_DIRECTORY + rf'\{DATE}01_datafeed_with_ow.csv'
 # define OUTPU_PATH
 OUTPUT_PATH = BASE_DIRECTORY + rf'\{DATE}_df_issuer_level_with_OVR.xlsx'
 # define OUTPUT_PATH for CSV file
-OUTPUT_PATH_CSV = BASE_DIRECTORY + rf'\{DATE}_df_issuer_level_with_ow.csv'
+OUTPUT_PATH_CSV = BASE_DIRECTORY + rf'\{DATE}_df_issuer_level_with_ovr.csv'
 
 logging.info("Loading raw dataset")
 # read csv INPUT_PATH
@@ -46,5 +44,6 @@ df_2.to_excel(OUTPUT_PATH, index=False)
 
 end_time = time.time()
 logging.info(f"Script completed in {end_time - start_time:.2f} seconds")
+logging.info(f"Files saved in {BASE_DIRECTORY}")
 # display rows before and after
 logging.info(f"\nRows before: {df.shape[0]} \nRows after: {df_2.shape[0]}")
