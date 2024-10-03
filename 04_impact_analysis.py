@@ -6,8 +6,9 @@ def setup_logging():
 
 def reorder_columns(df):
     cols = df.columns.tolist()
-    start_cols = [col for col in cols if not (col.startswith('str_') or col.startswith('art_') or col == 'sustainability_rating')]
-    end_cols = [col for col in cols if col.startswith('str_') or col.startswith('art_') or col == 'sustainability_rating'].sort()
+    start_cols = [col for col in cols if not (col.startswith('str_') or col.startswith('art_') or col.startswith('sustainability_'))]
+    end_cols = [col for col in cols if col.startswith('str_') or col.startswith('art_') or col.startswith('sustainability_')]
+    end_cols.sort()
     new_order = start_cols + end_cols
     return df[new_order]
 
