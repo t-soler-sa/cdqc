@@ -28,11 +28,11 @@ DATE = get_user_input()
 
 # Constants
 DATAFEED_PATH = Path(rf'C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\raw_dataset\{DATE}01_Production\{DATE}01_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv')
-OW_BASE_PATH = Path(rf'C:\Users\n740789\Documents\Projects_local\DataSets\overwrites\{DATE}_OVR_permid')
-OUTPUT_PATH = Path(r'C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ow')
+OW_BASE_PATH = Path(rf'C:\Users\n740789\Documents\Projects_local\DataSets\overrides\{DATE}_OVR_permid')
+OUTPUT_PATH = Path(r'C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr')
 
-# Define overwrites
-overwrites = [
+# Define overrides
+overrides = [
     (f'CS_001_SEC_{DATE}.xlsx', 'cs_001_sec', 'CS_001_SEC'),
     (f'CS_002_EC_{DATE}.xlsx', 'cs_002_ec', 'CS_002_EC'),
     (f'CS_003_SEC_{DATE}.xlsx', 'cs_003_sec', 'CS_003_SEC'),
@@ -62,10 +62,10 @@ def load_main_dataframe():
         
         return df
 
-def apply_overwrites(df, overwrites):
+def apply_overrides(df, overrides):
     id_column = 'permid' if 'permid' in df.columns else 'permID'
     
-    for file_name, original_col, update_col in overwrites:
+    for file_name, original_col, update_col in overrides:
         with timer(f"Applying overwrite for {original_col}"):
             file_path = OW_BASE_PATH / file_name
             
@@ -103,11 +103,11 @@ def main():
         # Load main dataframe
         df = load_main_dataframe()
         
-        # Apply overwrites
-        df = apply_overwrites(df, overwrites)
+        # Apply overrides
+        df = apply_overrides(df, overrides)
         
         # Save updated dataframe
-        output_file = OUTPUT_PATH / f"{DATE}01_datafeed_with_ow.csv"
+        output_file = OUTPUT_PATH / f"{DATE}01_datafeed_with_ovr.csv"
         with timer("Saving updated dataframe"):
             df.to_csv(output_file, sep=',', index=False)
             logging.info(f"Saved updated dataframe to {output_file}")

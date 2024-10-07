@@ -84,7 +84,7 @@ def main():
     setup_logging()
     start_time = time.time()
     logging.info("Script started")
-    base_dir = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\overwrites")
+    base_dir = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\overrides")
     input_file = base_dir / "BBDD_Overrides_oct24.xlsx"
 
     if len(sys.argv) > 1:

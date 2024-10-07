@@ -23,7 +23,7 @@ def analysis(datafeed_col:list=['permid','art_8_basicos'], workbench_file:str='A
     
     # read datafeed
     logging.info('Loading datafeed')
-    df = pd.read_csv(r'C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ow\202410_df_issuer_level_with_ovr.csv', usecols = datafeed_col, dtype=str)
+    df = pd.read_csv(r'C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr\202410_df_issuer_level_with_ovr.csv', usecols = datafeed_col, dtype=str)
     logging.info('Datafeed loaded')
     
     # read aladdin workbench excel file

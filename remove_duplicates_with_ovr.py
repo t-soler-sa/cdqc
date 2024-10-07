@@ -14,9 +14,9 @@ logging.info("Script started")
 DATE = input("Insert data in the formar YYYYMM, please: ")
 
 # define BASE_DIRECTORY   C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ow
-BASE_DIRECTORY = r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ow"
+BASE_DIRECTORY = r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr"
 # define INPUT_PATH = BASE_DIRECTORY \ r'20240701_datafeed_with_ow.csv'
-INPUT_PATH = BASE_DIRECTORY + rf'\{DATE}01_datafeed_with_ow.csv'
+INPUT_PATH = BASE_DIRECTORY + rf'\{DATE}01_datafeed_with_ovr.csv'
 # define OUTPU_PATH
 OUTPUT_PATH = BASE_DIRECTORY + rf'\{DATE}_df_issuer_level_with_OVR.xlsx'
 # define OUTPUT_PATH for CSV file

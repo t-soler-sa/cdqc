@@ -42,7 +42,6 @@ while True:
             logging.info("Quitting the script")
             sys.exit()
         
-
         DATE = input("Please insert date with the format yyyymm: ")
         DATE_PREV = str(int(DATE) - 1)
         logging.info(f"DATE: {DATE}")
@@ -85,20 +84,18 @@ def add_variation_columns(df):
     after_cols = [col.replace('_before', '_after') for col in before_cols]
     variation_cols = ['variation_' + col.rpartition('_')[0] for col in before_cols]
     
-    logging.info(f"Number of before columns: {len(before_cols)}")
-    logging.info(f"Number of after columns: {len(after_cols)}")
-    
     # Only create variation columns for existing pairs of before/after columns
     valid_cols = [i for i, col in enumerate(after_cols) if col in df.columns]
     before_cols = [before_cols[i] for i in valid_cols]
     after_cols = [after_cols[i] for i in valid_cols]
     variation_cols = [variation_cols[i] for i in valid_cols]
     
-    logging.info(f"Number of valid column pairs: {len(valid_cols)}")
-    
     # Create variation columns
-    for before, after, variation in zip(before_cols, after_cols, variation_cols):
-        df[variation] = df[before].ne(df[after])
+    variation_data = {variation: df[before].ne(df[after]) for before, after, variation in zip(before_cols, after_cols, variation_cols)}
+    variation_df = pd.DataFrame(variation_data, index=df.index)
+    
+    # Concatenate the original dataframe with the variation dataframe
+    result_df = pd.concat([df, variation_df], axis=1)
     
     # Reorder columns
     new_order = []
@@ -106,15 +103,15 @@ def add_variation_columns(df):
         if col.endswith('_before'):
             base_name = col.rpartition('_')[0]
             variation_col = f'variation_{base_name}'
-            if variation_col in df.columns:
+            if variation_col in result_df.columns:
                 new_order.extend([variation_col, col])
             else:
                 new_order.append(col)
         elif not (col.endswith('_after') or col.startswith('variation_')):
             new_order.append(col)
-    new_order.extend([col for col in df.columns if col.endswith('_after')])
+    new_order.extend([col for col in result_df.columns if col.endswith('_after')])
     
-    result_df = df[new_order]
+    result_df = result_df[new_order]
     logging.info(f"Finished add_variation_columns. Resulting DataFrame shape: {result_df.shape}")
     return result_df
 
@@ -445,6 +442,8 @@ logging.info("Controversies processing completed")
 # Strategies
 logging.info("Processing strategies")
 
+logging.info("Processing strategies")
+
 try:
     # Select Relevant Datafeed's Fields
     strategies_columns = ['issuer_name', 'permid', 'str_001_s', 'str_002_ec', 'str_003_ec', 'str_004_asec', 
@@ -459,7 +458,7 @@ try:
     strategies_2 = strategies_2.drop_duplicates(subset=['permid'])
 
     # Merge Dataframes from both Months
-    strategies_df = pd.merge(strategies_1, strategies_2, on='permid', suffixes=('_before', '_after'), how='outer')
+    strategies_df = pd.merge(strategies_1, strategies_2, on='permid', suffixes=('_before', '_after'))
     strategies_df['issuer_name'] = strategies_df['issuer_name_before'].fillna(strategies_df['issuer_name_after'])
     strategies_df.drop(['issuer_name_before', 'issuer_name_after'], axis='columns', inplace=True)
 
@@ -487,14 +486,32 @@ try:
     other_columns = sorted(set(strategies_df.columns) - set(column_order) - set(variation_columns))
     strategies_df = strategies_df[column_order + variation_columns + other_columns]
 
+    # Print debug information
+    logging.info(f"strategies_df shape: {strategies_df.shape}")
+    logging.info(f"strategies_df dtypes:\n{strategies_df.dtypes}")
+    logging.info(f"'variation_estrategias' nunique values: {strategies_df['variation_estrategias'].nunique()}")
+    
+    # Check if 'variation_estrategias' is a single column or multiple columns
+    if isinstance(strategies_df['variation_estrategias'], pd.DataFrame):
+        logging.info("'variation_estrategias' is a DataFrame, not a Series. Columns:")
+        logging.info(strategies_df['variation_estrategias'].columns)
+        # Select only the first column if it's a DataFrame
+        strategies_df['variation_estrategias'] = strategies_df['variation_estrategias'].iloc[:, 0]
+    
+    logging.info(f"'variation_estrategias' value counts:\n{strategies_df['variation_estrategias'].value_counts()}")
+
+    # Ensure 'variation_estrategias' is boolean
+    strategies_df['variation_estrategias'] = strategies_df['variation_estrategias'].astype(bool)
+
+    # Filter rows where variation_estrategias is True
+    estrategias_true = strategies_df[strategies_df['variation_estrategias']].copy()
+
+    logging.info(f"Number of rows in estrategias_true: {len(estrategias_true)}")
+
     # Select the Columns with the variation that will be added to the final Dataframe
     estrategias = strategies_df[['permid', 'issuer_name', 'variation_estrategias']]
 
-    # Use boolean indexing instead of chained indexing
-    strategies_df = strategies_df.reset_index(drop=True)
-    estrategias_true = strategies_df[strategies_df['variation_estrategias'] == True].copy()
-
-
+    # Merge with portfolio strategies
     estrategias_true_str001 = pd.merge(estrategias_true, portfolio_str001, on='permid', how='inner')
     estrategias_true_str002 = pd.merge(estrategias_true, portfolio_str002, on='permid', how='inner')
     estrategias_true_str003 = pd.merge(estrategias_true, portfolio_str003, on='permid', how='inner')
@@ -519,7 +536,6 @@ logging.info(f"Estrategias_true shape: {estrategias_true.shape}")
 for strat in ['str001', 'str002', 'str003', 'str003b', 'str004', 'str005', 'art8', 'cs001']:
     df = locals()[f'estrategias_true_{strat}']
     logging.info(f"Estrategias_true_{strat} shape: {df.shape}")
-
 # Gather and export variations
 logging.info("Gathering and exporting variations")
 
@@ -531,11 +547,8 @@ dataframes = [
 ]
 
 # Start with the exposures DataFrame
-data = exposures
-
-# Merge each DataFrame in the list
-for df, key in dataframes:
-    data = pd.merge(data, df, on=key, how='outer')
+data = pd.concat([exposures] + [df.set_index(key) for df, key in dataframes], axis=1)
+data = data.reset_index()
 
 # Rename columns for consistency
 data.rename(columns={
@@ -572,7 +585,7 @@ export_data = {
 sheet_names = ['Resumen', 'Sust_R', 'Max_Exp', 'Controversias', 'Estrategias']
 
 # Create output directory
-base_dir = rf"C:\Users\n740789\Documents\Projects_local\DataSets\overwrites\analisis_cambios_ovr\{DATE}\\"
+base_dir = rf"C:\Users\n740789\Documents\Projects_local\DataSets\overrides\analisis_cambios_ovr\{DATE}\\"
 create_output_directory(base_dir)
 
 # Export results
@@ -586,7 +599,7 @@ for file_name, sheets in export_data.items():
 logging.info("All data exported successfully")
 
 # Create output directory
-base_dir = rf"C:\Users\n740789\Documents\Projects_local\DataSets\overwrites\analisis_cambios_ovr\{DATE}\\"
+base_dir = rf"C:\Users\n740789\Documents\Projects_local\DataSets\overrides\analisis_cambios_ovr\{DATE}\\"
 create_output_directory(base_dir)
 
 # Export results
