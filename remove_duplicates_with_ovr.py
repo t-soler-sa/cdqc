@@ -39,8 +39,8 @@ logging.info("Saving dataset at issuer level on a csv file")
 df_2.to_csv(OUTPUT_PATH_CSV, index=False)
 
 # save to OUTPUT_PATH as excel file
-logging.info("Saving dataset at issuer level on an Excel file")
-df_2.to_excel(OUTPUT_PATH, index=False)
+#logging.info("Saving dataset at issuer level on an Excel file")
+#df_2.to_excel(OUTPUT_PATH, index=False)
 
 end_time = time.time()
 logging.info(f"Script completed in {end_time - start_time:.2f} seconds")
