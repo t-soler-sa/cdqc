@@ -1,86 +1,87 @@
 import pandas as pd
 import numpy as np
 import logging
+from typing import List, Tuple
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-test_col = [
-    "str_001_s","str_002_ec","str_003_ec","str_004_asec","str_005_ec","cs_001_sec","gp_esccp",
-    "cs_003_sec","cs_002_ec","str_006_sec","str_007_sect","gp_esccp_22","gp_esccp_25","gp_esccp_30",
-    "art_8_basicos","str_003b_ec"
-]
+def load_data(file_path: str, columns: List[str]) -> pd.DataFrame:
+    """Load data from CSV file."""
+    return pd.read_csv(file_path, sep=',', dtype='unicode', usecols=columns)
 
-# Define constants 
-DATE_PREV = "202409"
-DATE = "202410"
+def prepare_dataframes(df1: pd.DataFrame, df2: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Prepare DataFrames by setting index and filtering for common indexes."""
+    df1.set_index('permid', inplace=True)
+    df2.set_index('permid', inplace=True)
+    common_indexes = df1.index.intersection(df2.index)
+    logging.info(f"Number of common indexes: {len(common_indexes)}")
+    return df1.loc[common_indexes], df2.loc[common_indexes]
 
-# Read files
-df_1_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{DATE_PREV}01_Equities_feed_IssuerLevel_sinOVR.csv"
-df_2_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
+def compare_dataframes(df1: pd.DataFrame, df2: pd.DataFrame, test_col: List[str]) -> pd.DataFrame:
+    """Compare DataFrames and create delta DataFrame."""
+    delta = df2.copy()
+    for col in test_col:
+        if col in df1.columns and col in df2.columns:
+            logging.info(f"Comparing column: {col}")
+            diff_mask = (df1[col] != df2[col])
+            delta.loc[~diff_mask, col] = np.nan
+    return delta
 
-# Read only the necessary columns
-columns_to_read = ['permid', 'isin', 'issuer_name'] + test_col
-df_1 = pd.read_csv(df_1_path, sep=',', dtype='unicode', usecols=columns_to_read)
-df_2 = pd.read_csv(df_2_path, sep=',', dtype='unicode', usecols=columns_to_read)
+def get_exclusion_list(row: pd.Series, df1: pd.DataFrame, test_col: List[str]) -> List[str]:
+    """Get list of columns that changed to EXCLUDED."""
+    return [col for col in test_col if row[col] == 'EXCLUDED' and df1.loc[row.name, col] != 'EXCLUDED']
 
-logging.info(f"df_1 shape: {df_1.shape}, df_2 shape: {df_2.shape}")
+def check_new_exclusions(df1: pd.DataFrame, df2: pd.DataFrame, delta: pd.DataFrame, test_col: List[str]) -> pd.DataFrame:
+    """Check for new exclusions and update delta DataFrame."""
+    delta['new_exclusion'] = False
+    for col in test_col:
+        if col in df1.columns and col in df2.columns:
+            logging.info(f"Checking for new exclusions in column: {col}")
+            mask = (df1[col] != 'EXCLUDED') & (df2[col] == 'EXCLUDED')
+            delta.loc[mask, 'new_exclusion'] = True
+            logging.info(f"Number of new exclusions in {col}: {mask.sum()}")
+    delta['exclusion_list'] = delta.apply(lambda row: get_exclusion_list(row, df1, test_col), axis=1)
+    return delta
 
-# Ensure both DataFrames have the same index (permId)
-df_1.set_index('permid', inplace=True)
-df_2.set_index('permid', inplace=True)
+def finalize_delta(delta: pd.DataFrame, test_col: List[str]) -> pd.DataFrame:
+    """Finalize delta DataFrame by removing unchanged rows and resetting index."""
+    delta = delta.dropna(subset=test_col, how='all')
+    delta.reset_index(inplace=True)
+    logging.info(f"Final delta shape: {delta.shape}")
+    return delta
 
-# Get the common indexes
-common_indexes = df_1.index.intersection(df_2.index)
-logging.info(f"Number of common indexes: {len(common_indexes)}")
+def main():
+    test_col = [
+        "str_001_s","str_002_ec","str_003_ec","str_004_asec","str_005_ec","cs_001_sec","gp_esccp",
+        "cs_003_sec","cs_002_ec","str_006_sec","str_007_sect","gp_esccp_22","gp_esccp_25","gp_esccp_30",
+        "art_8_basicos","str_003b_ec"
+    ]
 
-# Filter both DataFrames to only include common indexes
-df_1 = df_1.loc[common_indexes]
-df_2 = df_2.loc[common_indexes]
+    DATE_PREV = "202409"
+    DATE = "202410"
 
-# Initialize delta DataFrame with common indexes and all columns from df_2
-delta = df_2.copy()
+    df_1_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{DATE_PREV}01_Equities_feed_IssuerLevel_sinOVR.csv"
+    df_2_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
 
-# Compare the DataFrames
-for col in test_col:
-    if col in df_1.columns and col in df_2.columns:
-        logging.info(f"Comparing column: {col}")
-        # Find rows where the values are different
-        diff_mask = (df_1[col] != df_2[col])
-        
-        # Keep only the different values in delta
-        delta.loc[~diff_mask, col] = np.nan
+    columns_to_read = ['permid', 'isin', 'issuer_name'] + test_col
 
-# Add the new_exclusion column
-delta['new_exclusion'] = False
+    df_1 = load_data(df_1_path, columns_to_read)
+    df_2 = load_data(df_2_path, columns_to_read)
 
-# Function to get the list of columns that changed to EXCLUDED
-def get_exclusion_list(row):
-    return [col for col in test_col if row[col] == 'EXCLUDED' and df_1.loc[row.name, col] != 'EXCLUDED']
+    logging.info(f"df_1 shape: {df_1.shape}, df_2 shape: {df_2.shape}")
 
-# Check for new exclusions and create exclusion_list
-for col in test_col:
-    if col in df_1.columns and col in df_2.columns:
-        logging.info(f"Checking for new exclusions in column: {col}")
-        mask = (df_1[col] != 'EXCLUDED') & (df_2[col] == 'EXCLUDED')
-        delta.loc[mask, 'new_exclusion'] = True
-        logging.info(f"Number of new exclusions in {col}: {mask.sum()}")
+    df_1, df_2 = prepare_dataframes(df_1, df_2)
+    
+    delta = compare_dataframes(df_1, df_2, test_col)
+    
+    delta = check_new_exclusions(df_1, df_2, delta, test_col)
+    
+    delta = finalize_delta(delta, test_col)
 
-# Create exclusion_list column
-delta['exclusion_list'] = delta.apply(get_exclusion_list, axis=1)
+    delta.to_csv('delta_results.csv', index=False)
 
-# Remove rows where all test columns are NaN (no changes)
-delta = delta.dropna(subset=test_col, how='all')
+    logging.info("Analysis completed successfully.")
 
-# Reset index to make permId a column again
-delta.reset_index(inplace=True)
-
-logging.info(f"Final delta shape: {delta.shape}")
-
-# Display the first few rows of the result
-print(delta.head())
-
-# Optional: Save to CSV
-delta.to_csv('delta_results.csv', index=False)
-
-logging.info("Analysis completed successfully.")
+if __name__ == "__main__":
+    main()
