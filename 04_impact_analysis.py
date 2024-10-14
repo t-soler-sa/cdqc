@@ -2,9 +2,22 @@ import pandas as pd
 import logging
 import os
 from pathlib import Path
+import time
+from functools import wraps
 
 def setup_logging():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def measure_time(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        logging.info(f"Total execution time: {execution_time:.2f} seconds")
+        return result
+    return wrapper
 
 def reorder_columns(df):
     cols = df.columns.tolist()
@@ -67,6 +80,7 @@ def process_directory(input_dir: str, output_dir: str, datafeed_col: list):
             output_file = os.path.join(output_dir, file.replace('.xlsx', '_analysis.xlsx'))
             analysis(input_file, output_file, datafeed_col)
 
+@measure_time
 def main():
     setup_logging()
     base_dir = r'C:\Users\n740789\Documents\Projects_local\DataSets\impact_analysis\1024'
