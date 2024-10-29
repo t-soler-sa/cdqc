@@ -1,10 +1,16 @@
-import pandas
-import time
 import logging
+import time
+
+import pandas
+
 
 # Set up logging info
 def setup_logging():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
+
+
 setup_logging()
 # Add timer to the function
 start_time = time.time()
@@ -14,13 +20,15 @@ logging.info("Script started")
 DATE = input("Insert data in the formar YYYYMM, please: ")
 
 # define BASE_DIRECTORY   C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ow
-BASE_DIRECTORY = r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr"
+BASE_DIRECTORY = (
+    r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr"
+)
 # define INPUT_PATH = BASE_DIRECTORY \ r'20240701_datafeed_with_ow.csv'
-INPUT_PATH = BASE_DIRECTORY + rf'\{DATE}01_datafeed_with_ovr.csv'
+INPUT_PATH = BASE_DIRECTORY + rf"\{DATE}01_datafeed_with_ovr.csv"
 # define OUTPU_PATH
-OUTPUT_PATH = BASE_DIRECTORY + rf'\{DATE}_df_issuer_level_with_OVR.xlsx'
+OUTPUT_PATH = BASE_DIRECTORY + rf"\{DATE}_df_issuer_level_with_OVR.xlsx"
 # define OUTPUT_PATH for CSV file
-OUTPUT_PATH_CSV = BASE_DIRECTORY + rf'\{DATE}_df_issuer_level_with_ovr.csv'
+OUTPUT_PATH_CSV = BASE_DIRECTORY + rf"\{DATE}_df_issuer_level_with_ovr.csv"
 
 logging.info("Loading raw dataset")
 # read csv INPUT_PATH
@@ -31,7 +39,7 @@ df.columns = df.columns.str.lower()
 
 logging.info("Removing duplicates by permId")
 # remove duplicate by subset "issuer_name"
-df_2 = df.drop_duplicates(subset=['permid'])
+df_2 = df.drop_duplicates(subset=["permid"])
 
 
 # save to OUTPUT_PATH as csv file
@@ -39,8 +47,8 @@ logging.info("Saving dataset at issuer level on a csv file")
 df_2.to_csv(OUTPUT_PATH_CSV, index=False)
 
 # save to OUTPUT_PATH as excel file
-#logging.info("Saving dataset at issuer level on an Excel file")
-#df_2.to_excel(OUTPUT_PATH, index=False)
+# logging.info("Saving dataset at issuer level on an Excel file")
+# df_2.to_excel(OUTPUT_PATH, index=False)
 
 end_time = time.time()
 logging.info(f"Script completed in {end_time - start_time:.2f} seconds")
