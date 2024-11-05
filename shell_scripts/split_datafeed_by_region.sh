@@ -4,7 +4,7 @@
 start_time=$(date +%s)
 
 # Input and output directories
-INPUT_FILE="/c/Users/n740789/Documents/Projects_local/DataSets/DATAFEED/datafeeds_with_ow/20241001_datafeed_with_ow.csv"
+INPUT_FILE="/c/Users/n740789/Documents/Projects_local/DataSets/DATAFEED/datafeeds_with_ovr/20241001_datafeed_with_ovr.csv"
 OUTPUT_DIR="/c/Users/n740789/Documents/Projects_local/DataSets/DATAFEED/ficheros_tratados/Feed_region/202410"
 
 # Extract the date from the input file name (format: YYYYMMDD)
