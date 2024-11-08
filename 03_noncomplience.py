@@ -140,7 +140,7 @@ def main():
 
     with timer("Loading data files"):
         datafeed = load_dataframe(
-            DATAFEED_DIR / f"{DATE}_df_issuer_level_with_ovr.csv", dtype="unicode"
+            DATAFEED_DIR / f"{DATE}01_datafeed_with_ovr.csv", dtype="unicode"
         )
         datafeed.columns = datafeed.columns.str.lower()
 
