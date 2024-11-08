@@ -1,11 +1,23 @@
 #!/bin/bash
 
-# Start timer
-start_time=$(date +%s)
+# Ask for user input
+read -p "Enter the date in YYYYMM format (press Enter for current month): " USER_DATE
 
-# Get the current date in the format YYYYMM
-DATE=$(date +"%Y%m")
+# Use user input if provided, otherwise use current date
+if [ -z "$USER_DATE" ]; then
+    DATE=$(date +"%Y%m")
+else
+    # Validate user input
+    if [[ ! $USER_DATE =~ ^[0-9]{6}$ ]]; then
+        echo "Invalid date format. Please use YYYYMM."
+        exit 1
+    fi
+    DATE=$USER_DATE
+fi
+
 DATE01="${DATE}01"
+
+# Rest of your script continues here...
 
 # Input and output directories
 INPUT_FILE="/c/Users/n740789/Documents/Projects_local/DataSets/DATAFEED/datafeeds_with_ovr/${DATE01}_datafeed_with_ovr.csv"
