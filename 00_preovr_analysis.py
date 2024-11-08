@@ -1,5 +1,7 @@
 import logging
 from typing import List, Tuple
+from datetime import datetime
+import sys
 
 import numpy as np
 import pandas as pd
@@ -8,6 +10,27 @@ import pandas as pd
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
+
+# Define a function to validate the date format
+def validate_date(date_string):
+    try:
+        datetime.strptime(date_string, "%Y%m")
+        return True
+    except ValueError:
+        return False
+
+
+# Define a function to get the date from user input
+def get_date():
+    if len(sys.argv) > 1 and validate_date(sys.argv[1]):
+        return sys.argv[1]
+    else:
+        while True:
+            date_input = input("Enter the date in YYYYMM format: ")
+            if validate_date(date_input):
+                return date_input
+            print("Invalid date format. Please use YYYYMM.")
 
 
 def load_data(file_path: str, columns: List[str]) -> pd.DataFrame:
@@ -104,6 +127,10 @@ def finalize_delta(delta: pd.DataFrame, test_col: List[str]) -> pd.DataFrame:
 
 
 def main():
+    # Get user input for date
+    DATE = get_date()
+    DATE_PREV = str(int(DATE) - 1)
+
     test_col = [
         "str_001_s",
         "str_002_ec",
@@ -122,9 +149,6 @@ def main():
         "art_8_basicos",
         "str_003b_ec",
     ]
-
-    DATE_PREV = "202409"
-    DATE = "202410"
 
     df_1_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{DATE_PREV}01_Equities_feed_IssuerLevel_sinOVR.csv"
     df_2_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
