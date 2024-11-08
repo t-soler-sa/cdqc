@@ -1,6 +1,8 @@
 import logging
+import sys
 import time
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -9,6 +11,12 @@ import pandas as pd
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
+# Global variables
+DATE = None
+DATAFEED_PATH = None
+OW_BASE_PATH = None
+OUTPUT_PATH = None
 
 
 # Timer context manager
@@ -20,44 +28,37 @@ def timer(description: str):
     logging.info(f"{description} took {elapsed_time:.2f} seconds")
 
 
-def get_user_input():
-    while True:
-        date_input = input("Enter the date in YYYYMM format: ")
-        if len(date_input) == 6 and date_input.isdigit():
-            return date_input
-        else:
-            print("Invalid input. Please enter a 6-digit number in YYYYMM format.")
+# Define a function to validate the date format
+def validate_date(date_string):
+    try:
+        datetime.strptime(date_string, "%Y%m")
+        return True
+    except ValueError:
+        return False
 
 
-# Get user input for date
-DATE = get_user_input()
+def get_date():
+    if len(sys.argv) > 1 and validate_date(sys.argv[1]):
+        return sys.argv[1]
+    else:
+        while True:
+            date_input = input("Enter the date in YYYYMM format: ")
+            if validate_date(date_input):
+                return date_input
+            print("Invalid date format. Please use YYYYMM.")
 
-# Constants
-DATAFEED_PATH = Path(
-    rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\raw_dataset\{DATE}01_Production\{DATE}01_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv"
-)
-OW_BASE_PATH = Path(
-    rf"C:\Users\n740789\Documents\Projects_local\DataSets\overrides\{DATE}_OVR_permid"
-)
-OUTPUT_PATH = Path(
-    r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr"
-)
 
-# Define overrides
-overrides = [
-    (f"CS_001_SEC_{DATE}.xlsx", "cs_001_sec", "CS_001_SEC"),
-    (f"CS_002_EC_{DATE}.xlsx", "cs_002_ec", "CS_002_EC"),
-    (f"CS_003_SEC_{DATE}.xlsx", "cs_003_sec", "CS_003_SEC"),
-    (f"STR_001_SEC_{DATE}.xlsx", "str_001_s", "STR_001_SEC"),
-    (f"STR_002_SEC_{DATE}.xlsx", "str_002_ec", "STR_002_SEC"),
-    (f"STR_003_SEC_{DATE}.xlsx", "str_003_ec", "STR_003_SEC"),
-    (f"STR_004_SEC_{DATE}.xlsx", "str_004_asec", "STR_004_SEC"),
-    (f"STR_005_SEC_{DATE}.xlsx", "str_005_ec", "STR_005_SEC"),
-    (f"STR_006_SEC_{DATE}.xlsx", "str_006_sec", "STR_006_SEC"),
-    (f"STR_007_SECT_{DATE}.xlsx", "str_007_sect", "STR_007_SECT"),
-    (f"STR_SFDR8_AEC_{DATE}.xlsx", "art_8_basicos", "STR_SFDR8_AEC"),
-    (f"STR_003B_EC_{DATE}.xlsx", "str_003b_ec", "STR_003B_EC"),
-]
+def setup_paths(date):
+    global DATAFEED_PATH, OW_BASE_PATH, OUTPUT_PATH
+    DATAFEED_PATH = Path(
+        rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\raw_dataset\{date}01_Production\{date}01_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv"
+    )
+    OW_BASE_PATH = Path(
+        rf"C:\Users\n740789\Documents\Projects_local\DataSets\overrides\{date}_OVR_permid"
+    )
+    OUTPUT_PATH = Path(
+        r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr"
+    )
 
 
 def load_main_dataframe():
@@ -115,6 +116,29 @@ def apply_overrides(df, overrides):
 
 
 def main():
+    global DATE
+    # Get user input for date
+    DATE = get_date()
+
+    # Setup paths
+    setup_paths(DATE)
+
+    # Define overrides
+    overrides = [
+        (f"CS_001_SEC_{DATE}.xlsx", "cs_001_sec", "CS_001_SEC"),
+        (f"CS_002_EC_{DATE}.xlsx", "cs_002_ec", "CS_002_EC"),
+        (f"CS_003_SEC_{DATE}.xlsx", "cs_003_sec", "CS_003_SEC"),
+        (f"STR_001_SEC_{DATE}.xlsx", "str_001_s", "STR_001_SEC"),
+        (f"STR_002_SEC_{DATE}.xlsx", "str_002_ec", "STR_002_SEC"),
+        (f"STR_003_SEC_{DATE}.xlsx", "str_003_ec", "STR_003_SEC"),
+        (f"STR_004_SEC_{DATE}.xlsx", "str_004_asec", "STR_004_SEC"),
+        (f"STR_005_SEC_{DATE}.xlsx", "str_005_ec", "STR_005_SEC"),
+        (f"STR_006_SEC_{DATE}.xlsx", "str_006_sec", "STR_006_SEC"),
+        (f"STR_007_SECT_{DATE}.xlsx", "str_007_sect", "STR_007_SECT"),
+        (f"STR_SFDR8_AEC_{DATE}.xlsx", "art_8_basicos", "STR_SFDR8_AEC"),
+        (f"STR_003B_EC_{DATE}.xlsx", "str_003b_ec", "STR_003B_EC"),
+    ]
+
     with timer("Total execution time"):
         # Ensure output directory exists
         OUTPUT_PATH.mkdir(parents=True, exist_ok=True)

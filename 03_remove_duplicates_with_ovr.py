@@ -1,61 +1,96 @@
+import argparse
 import logging
+import sys
 import time
+from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 
 
-# Set up logging info
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
     )
 
 
-setup_logging()
-# Add timer to the function
-start_time = time.time()
-logging.info("Script started")
+@contextmanager
+def timer(description: str):
+    start = time.time()
+    yield
+    elapsed_time = time.time() - start
+    logging.info(f"{description} took {elapsed_time:.2f} seconds")
 
-# Define Date
-DATE = input("Insert date in the format YYYYMM, please: ")
 
-# Define BASE_DIRECTORY
-BASE_DIRECTORY = Path(
-    r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr"
-)
+def validate_date(date_string):
+    try:
+        datetime.strptime(date_string, "%Y%m")
+        return True
+    except ValueError:
+        return False
 
-# Define INPUT_PATH
-INPUT_PATH = BASE_DIRECTORY / f"{DATE}01_datafeed_with_ovr.csv"
 
-# Define OUTPUT_PATH for Excel file
-OUTPUT_PATH = BASE_DIRECTORY / f"{DATE}_df_issuer_level_with_OVR.xlsx"
+def get_date():
+    parser = argparse.ArgumentParser(description="Process data for a specific date.")
+    parser.add_argument("date", nargs="?", help="Date in YYYYMM format")
+    parser.add_argument("--date", dest="date_flag", help="Date in YYYYMM format")
+    args = parser.parse_args()
 
-# Define OUTPUT_PATH for CSV file
-OUTPUT_PATH_CSV = BASE_DIRECTORY / f"{DATE}_df_issuer_level_with_ovr.csv"
+    if args.date and validate_date(args.date):
+        return args.date
+    elif args.date_flag and validate_date(args.date_flag):
+        return args.date_flag
+    else:
+        while True:
+            date_input = input("Enter the date in YYYYMM format: ")
+            if validate_date(date_input):
+                return date_input
+            print("Invalid date format. Please use YYYYMM.")
 
-logging.info("Loading raw dataset")
-# Read csv INPUT_PATH
-df = pd.read_csv(INPUT_PATH, low_memory=False)
 
-# Lower column names
-df.columns = df.columns.str.lower()
+def process_data(df):
+    df.columns = df.columns.str.lower()
+    return df.drop_duplicates(subset=["permid"])
 
-logging.info("Removing duplicates by permId")
-# Remove duplicate by subset "permid"
-df_2 = df.drop_duplicates(subset=["permid"])
 
-# Save to OUTPUT_PATH as csv file
-logging.info("Saving dataset at issuer level on a csv file")
-df_2.to_csv(OUTPUT_PATH_CSV, index=False)
+def save_data(df, csv_path, excel_path):
+    logging.info("Saving dataset at issuer level on a csv file")
+    df.to_csv(csv_path, index=False)
 
-# Save to OUTPUT_PATH as excel file
-# Uncomment the following lines if you want to save as Excel file
-logging.info("Saving dataset at issuer level on an Excel file")
-df_2.to_excel(OUTPUT_PATH, index=False)
+    # logging.info("Saving dataset at issuer level on an Excel file")
+    # df.to_excel(excel_path, index=False)
 
-end_time = time.time()
-logging.info(f"Script completed in {end_time - start_time:.2f} seconds")
-logging.info(f"Files saved in {BASE_DIRECTORY}")
-# Display rows before and after
-logging.info(f"\nRows before: {df.shape[0]} \nRows after: {df_2.shape[0]}")
+
+def main():
+    setup_logging()
+    start_time = time.time()
+    logging.info("Script started")
+
+    # CONSTANTS
+    # Get user input for date
+    DATE = get_date()
+    # Define input and output paths
+    BASE_DIRECTORY = Path(
+        r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr"
+    )
+    INPUT_PATH = BASE_DIRECTORY / f"{DATE}01_datafeed_with_ovr.csv"
+    OUTPUT_PATH = BASE_DIRECTORY / f"{DATE}_df_issuer_level_with_OVR.xlsx"
+    OUTPUT_PATH_CSV = BASE_DIRECTORY / f"{DATE}_df_issuer_level_with_ovr.csv"
+
+    logging.info("Loading raw dataset")
+    df = pd.read_csv(INPUT_PATH, low_memory=False)
+
+    logging.info("Removing duplicates by permId")
+    df_2 = process_data(df)
+
+    save_data(df_2, OUTPUT_PATH_CSV, OUTPUT_PATH)
+
+    end_time = time.time()
+    logging.info(f"Script completed in {end_time - start_time:.2f} seconds")
+    logging.info(f"\nRows before: {df.shape[0]} \nRows after: {df_2.shape[0]}")
+    logging.info(f"Files saved in {BASE_DIRECTORY}")
+
+
+if __name__ == "__main__":
+    main()

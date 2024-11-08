@@ -1,18 +1,22 @@
 #!/bin/bash
 
-# Ask for user input
-read -p "Enter the date in YYYYMM format (press Enter for current month): " USER_DATE
-
-# Use user input if provided, otherwise use current date
-if [ -z "$USER_DATE" ]; then
-    DATE=$(date +"%Y%m")
-else
-    # Validate user input
-    if [[ ! $USER_DATE =~ ^[0-9]{6}$ ]]; then
-        echo "Invalid date format. Please use YYYYMM."
-        exit 1
-    fi
+# Check if USER_DATE is already set from environment
+if [ -n "$USER_DATE" ]; then
     DATE=$USER_DATE
+else
+    # Ask for user input only if USER_DATE is not set
+    read -p "Enter the date in YYYYMM format (press Enter for current month): " USER_INPUT
+    # Use user input if provided, otherwise use current date
+    if [ -z "$USER_INPUT" ]; then
+        DATE=$(date +"%Y%m")
+    else
+        # Validate user input
+        if [[ ! $USER_INPUT =~ ^[0-9]{6}$ ]]; then
+            echo "Invalid date format. Please use YYYYMM."
+            exit 1
+        fi
+        DATE=$USER_INPUT
+    fi
 fi
 
 DATE01="${DATE}01"

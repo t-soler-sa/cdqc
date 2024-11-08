@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import time
@@ -15,36 +16,6 @@ logging.basicConfig(
 )
 
 
-# Define functions to ask for date input
-def validate_year_month(year_month: str) -> bool:
-    """Validate the input year_month format."""
-    try:
-        datetime.strptime(year_month, "%Y%m")
-        return True
-    except ValueError:
-        return False
-
-
-def get_year_month() -> str:
-    while True:
-        user_input = input("Please insert date with the format yyyymm: ")
-        if validate_year_month(user_input):
-            return user_input
-        logging.warning("Invalid date format entered. Please try again.")
-
-
-# Constants
-DATE = get_year_month()
-BASE_DIR = Path(r"C:\Users\n740789\Documents\Projects_local")
-DATAFEED_DIR = BASE_DIR / "DataSets" / "DATAFEED" / "datafeeds_with_ovr"
-CROSSREF_DIR = BASE_DIR / "DataSets" / "crossreference"
-CARTERAS_DIR = BASE_DIR / "DataSets" / "aladdin_carteras_benchmarks"
-OUTPUT_DIR = BASE_DIR / "DataSets" / "incumplimientos"
-PORTFOLIO_LISTS_FILE = (
-    BASE_DIR / "DataSets" / "committee_portfolios" / "portfolio_lists.xlsx"
-)
-
-
 # Ignore workbook warnings
 @contextmanager
 def suppress_openpyxl_warning():
@@ -53,12 +24,39 @@ def suppress_openpyxl_warning():
         yield
 
 
+# Timer context manager
 @contextmanager
 def timer(description: str):
     start = time.time()
     yield
     elapsed_time = time.time() - start
     logging.info(f"{description} took {elapsed_time:.2f} seconds")
+
+
+def validate_date(date_string):
+    try:
+        datetime.strptime(date_string, "%Y%m")
+        return True
+    except ValueError:
+        return False
+
+
+def get_date():
+    parser = argparse.ArgumentParser(description="Process data for a specific date.")
+    parser.add_argument("date", nargs="?", help="Date in YYYYMM format")
+    parser.add_argument("--date", dest="date_flag", help="Date in YYYYMM format")
+    args = parser.parse_args()
+
+    if args.date and validate_date(args.date):
+        return args.date
+    elif args.date_flag and validate_date(args.date_flag):
+        return args.date_flag
+    else:
+        while True:
+            date_input = input("Enter the date in YYYYMM format: ")
+            if validate_date(date_input):
+                return date_input
+            print("Invalid date format. Please use YYYYMM.")
 
 
 def load_dataframe(filepath: Path, **kwargs) -> pd.DataFrame:
@@ -152,12 +150,24 @@ def filter_by_portfolio_lists(
 
 
 def main():
-    logging.info("Starting data processing")
-
-    portfolio_lists = load_portfolio_lists(PORTFOLIO_LISTS_FILE)
-    logging.info("committee portfolio list loaded")
+    start_time = time.time()
+    # CONSTANTS
+    # Get user input for date
+    DATE = get_date()
+    # Define input and output paths
+    BASE_DIR = Path(r"C:\Users\n740789\Documents\Projects_local")
+    DATAFEED_DIR = BASE_DIR / "DataSets" / "DATAFEED" / "datafeeds_with_ovr"
+    CROSSREF_DIR = BASE_DIR / "DataSets" / "crossreference"
+    CARTERAS_DIR = BASE_DIR / "DataSets" / "aladdin_carteras_benchmarks"
+    OUTPUT_DIR = BASE_DIR / "DataSets" / "incumplimientos"
+    PORTFOLIO_LISTS_FILE = (
+        BASE_DIR / "DataSets" / "committee_portfolios" / "portfolio_lists.xlsx"
+    )
 
     with timer("Loading data files"):
+        logging.info("Starting data processing")
+        portfolio_lists = load_portfolio_lists(PORTFOLIO_LISTS_FILE)
+        logging.info("committee portfolio list loaded")
         datafeed = load_dataframe(
             DATAFEED_DIR / f"{DATE}01_datafeed_with_ovr.csv", dtype="unicode"
         )
@@ -364,6 +374,8 @@ def main():
         output_file = OUTPUT_DIR / f"incumplimientos_{DATE}.csv"
         filtered_results.to_csv(output_file, index=False)
 
+    end_time = time.time()
+    logging.info(f"Script completed in {end_time - start_time:.2f} seconds")
     logging.info(f"Results saved to {output_file}")
 
 
