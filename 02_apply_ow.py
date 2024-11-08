@@ -12,12 +12,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Global variables
-DATE = None
-DATAFEED_PATH = None
-OW_BASE_PATH = None
-OUTPUT_PATH = None
-
 
 # Timer context manager
 @contextmanager
@@ -37,6 +31,7 @@ def validate_date(date_string):
         return False
 
 
+# Define a function to get the date from user input
 def get_date():
     if len(sys.argv) > 1 and validate_date(sys.argv[1]):
         return sys.argv[1]
@@ -46,6 +41,13 @@ def get_date():
             if validate_date(date_input):
                 return date_input
             print("Invalid date format. Please use YYYYMM.")
+
+
+# Global variables
+DATE = None
+DATAFEED_PATH = None
+OW_BASE_PATH = None
+OUTPUT_PATH = None
 
 
 def setup_paths(date):
@@ -117,6 +119,10 @@ def apply_overrides(df, overrides):
 
 def main():
     global DATE
+    """The `global` keyword is used inside a function to indicate that the function 
+    will modify the global variables. Without this declaration, 
+    Python would create new local variables instead of modifying the global ones."""
+
     # Get user input for date
     DATE = get_date()
 
