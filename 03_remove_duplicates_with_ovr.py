@@ -54,12 +54,9 @@ def process_data(df):
     return df.drop_duplicates(subset=["permid"])
 
 
-def save_data(df, csv_path, excel_path):
+def save_data(df, csv_path):
     logging.info("Saving dataset at issuer level on a csv file")
     df.to_csv(csv_path, index=False)
-
-    # logging.info("Saving dataset at issuer level on an Excel file")
-    # df.to_excel(excel_path, index=False)
 
 
 def main():
@@ -75,8 +72,7 @@ def main():
         r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr"
     )
     INPUT_PATH = BASE_DIRECTORY / f"{DATE}01_datafeed_with_ovr.csv"
-    OUTPUT_PATH = BASE_DIRECTORY / f"{DATE}_df_issuer_level_with_OVR.xlsx"
-    OUTPUT_PATH_CSV = BASE_DIRECTORY / f"{DATE}_df_issuer_level_with_ovr.csv"
+    OUTPUT_PATH = BASE_DIRECTORY / f"{DATE}_df_issuer_level_with_ovr.csv"
 
     logging.info("Loading raw dataset")
     df = pd.read_csv(INPUT_PATH, low_memory=False)
@@ -84,7 +80,7 @@ def main():
     logging.info("Removing duplicates by permId")
     df_2 = process_data(df)
 
-    save_data(df_2, OUTPUT_PATH_CSV, OUTPUT_PATH)
+    save_data(df_2, OUTPUT_PATH)
 
     end_time = time.time()
     logging.info(f"Script completed in {end_time - start_time:.2f} seconds")
