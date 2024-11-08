@@ -3,8 +3,12 @@ import os
 import time
 from functools import wraps
 from pathlib import Path
+import warnings
 
 import pandas as pd
+
+# add remove warnign for openpyxl
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 def setup_logging():
@@ -56,7 +60,7 @@ def analysis(input_file: str, output_file: str, datafeed_col: list):
     # LOAD DATASETS & MODIFY COLUMN NAMES
     logging.info("Loading crossreference")
     cross = pd.read_csv(
-        r"C:\Users\n740789\Documents\Projects_local\DataSets\crossreference\Aladdin_Clarity_Issuers_20241001.csv",
+        r"C:\Users\n740789\Documents\Projects_local\DataSets\crossreference\Aladdin_Clarity_Issuers_20241101.csv",  # TO ADD: Ask User Input for crossreference.
         dtype={"CLARITY_AI": str},
     )
     cross.rename(
@@ -67,7 +71,7 @@ def analysis(input_file: str, output_file: str, datafeed_col: list):
     # read datafeed
     logging.info("Loading datafeed")
     df = pd.read_csv(
-        r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr\202410_df_issuer_level_with_ovr.csv",
+        r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr\202411_df_issuer_level_with_ovr.csv",  # TO ADD: Ask User Input for datafeed.
         usecols=datafeed_col,
         dtype=str,
     )
@@ -126,9 +130,7 @@ def process_directory(input_dir: str, output_dir: str, datafeed_col: list):
 @measure_time
 def main():
     setup_logging()
-    base_dir = (
-        r"C:\Users\n740789\Documents\Projects_local\DataSets\impact_analysis\1024"
-    )
+    base_dir = r"C:\Users\n740789\Documents\Projects_local\DataSets\impact_analysis\2411"  # TO ADD: Ask User Input for date base directory.
     input_base = os.path.join(
         base_dir, "aladdin_input"
     )  # TO ADD: Ask User Input for aladdin_input.
