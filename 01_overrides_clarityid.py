@@ -126,12 +126,17 @@ def main():
     start_time = time.time()
     logging.info("Script started")
     base_dir = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\overrides")
-    input_file = base_dir / "BBDD_Overrides_oct24.xlsx"
 
     if len(sys.argv) > 1:
         year_month = sys.argv[1]
     else:
         year_month = get_year_month()
+
+    input_file = base_dir / f"{year_month}_BBDD_Overrides.xlsx"
+
+    if not input_file.exists():
+        logging.error(f"Error: Input file {input_file} does not exist.")
+        return
 
     process_overwrites(year_month, base_dir, input_file)
 
