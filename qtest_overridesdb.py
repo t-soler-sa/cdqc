@@ -58,9 +58,18 @@ def main():
     # check number of nan values in col ClarityID & permId (Clarity)
     nan_values = df[["ClarityID", "permId (Clarity)"]].isnull().sum()
 
+    # check number col ClarityID == "-"
+    clarityid_unknown = df[df["ClarityID"] == "-"].shape[0]
+    # check number col permId (Clarity) == "-"
+    permid_unknown = df[df["permId (Clarity)"] == "-"].shape[0]
+
     # print the number of nan values
     logging.info(f"Number of empty values in ClarityID: {nan_values['ClarityID']}")
     logging.info(f"Number of empty values in permId: {nan_values['permId (Clarity)']}")
+
+    # print the number of unknown values
+    logging.info(f"Number of unknown values in ClarityID: {clarityid_unknown}")
+    logging.info(f"Number of unknown values in permId: {permid_unknown}")
 
     # finish script
     logging.info("Script finished successfully.")
