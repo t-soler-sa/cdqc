@@ -19,6 +19,9 @@ else
     fi
 fi
 
+# Record the start time
+start_time=$(date +%s)
+
 DATE01="${DATE}01"
 
 # Rest of your script continues here...
@@ -62,11 +65,6 @@ NR == 1 {
     }
 }' "$INPUT_FILE"
 
-# Print how long it took to run
-end_time=$(date +%s)
-execution_time=$((end_time - start_time))
-echo "Execution time: $execution_time seconds"
-
 # Count the number of lines in each output file
 echo "Lines in each output file:"
 for region in "${allowed_regions[@]}"; do
@@ -74,3 +72,13 @@ for region in "${allowed_regions[@]}"; do
     line_count=$(wc -l < "$out_file")
     echo "$region: $line_count"
 done
+
+# Print how long it took to run
+end_time=$(date +%s)
+execution_time=$((end_time - start_time))
+
+# Calculate minutes and seconds
+minutes=$((execution_time / 60))
+seconds=$((execution_time % 60))
+
+echo "Execution time: ${minutes} minutes and ${seconds} seconds"
