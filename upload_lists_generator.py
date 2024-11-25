@@ -1,11 +1,18 @@
-import pandas as pd
 import os
+from datetime import datetime
+
+import pandas as pd
 
 
 def process_csv_files(
     input_file,
     output_dir=r"C:\Users\n740789\Documents\clarity_data_quality_controls\excel_books",
 ):
+
+    # get date string yyyymmdd
+    date = datetime.now()
+    date_str = date.strftime("%y%m%d")
+
     # Read the input Excel file
     df = pd.read_excel(input_file)
 
@@ -40,7 +47,7 @@ def process_csv_files(
             )
 
             # Create filename
-            filename = f"{column}_{value}.csv"
+            filename = f"{date_str}_{column}_{value}.csv"
             filepath = os.path.join(output_dir, filename)
 
             # Save to CSV
