@@ -15,4 +15,5 @@ output/
 # ignore json file summary_data.json
 summary_data.json
 
-
+# ignore explore.ipynb file from old_notebooks dir
+old_notebooks/explore.ipynb
