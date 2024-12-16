@@ -17,3 +17,7 @@ summary_data.json
 
 # ignore explore.ipynb file from old_notebooks dir
 old_notebooks/explore.ipynb
+
+# ignore the sql populate table file
+database_project/
+database_project/populate_fact_table_clarity_data.sql
