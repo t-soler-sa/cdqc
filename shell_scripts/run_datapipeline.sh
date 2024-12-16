@@ -78,6 +78,3 @@ echo "Time: $minutes min, $seconds seconds."
 # Clean up
 unset USER_DATE
 deactivate  # Deactivate virtual environment
-
-
-
