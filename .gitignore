@@ -1,3 +1,18 @@
 # Git Ignore files #
 
 .venv
+
+# Ignore the excel books direcotry
+excel_books/
+
+# Ignore the ouput directory
+output/
+
+# ignore delta_results files
+*_delta_results.csv
+202411_delta_results_analysis_preovr.csv
+
+# ignore json file summary_data.json
+summary_data.json
+
+
