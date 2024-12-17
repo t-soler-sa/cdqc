@@ -61,4 +61,4 @@ df_2.to_csv(csv_output_path, index=False)
 end_time = time.time()
 logging.info(f"Script completed in {end_time - start_time:.2f} seconds")
 # display rows before and after
-logging.info(f"\nRows before: {df.shape[0]} \nRows after: {df_2.shape[0]}")
+logging.info(f"FINAL OUTPUT:\nRows before: {df.shape[0]} \nRows after: {df_2.shape[0]}")
