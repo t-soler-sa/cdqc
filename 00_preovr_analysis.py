@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 
 # Set up logging
 logging.basicConfig(
@@ -129,7 +130,9 @@ def finalize_delta(delta: pd.DataFrame, test_col: List[str]) -> pd.DataFrame:
 def main():
     # Get user input for date
     DATE = get_date()
-    DATE_PREV = str(int(DATE) - 1)
+    date_obj = datetime.strptime(DATE, "%Y%m")
+    prev_date_obj = date_obj - relativedelta(months=1)
+    DATE_PREV = prev_date_obj.strftime("%Y%m")
 
     test_col = [
         "str_001_s",
