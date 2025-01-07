@@ -74,7 +74,3 @@ total_time=$((end_time - start_time))
 minutes=$((total_time / 60))
 seconds=$((total_time % 60))
 echo "Time: $minutes min, $seconds seconds."
-
-# Clean up
-unset USER_DATE
-deactivate  # Deactivate virtual environment
