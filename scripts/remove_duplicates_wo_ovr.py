@@ -19,6 +19,8 @@ logging.info("Script started")
 
 # Define Date
 DATE = input("Insert data in the formar YYYYMM, please: ")
+# Get year from DATE
+YEAR = DATE[:4]
 
 # define BASE_DIRECTORY
 BASE_DIRECTORY = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED")
@@ -27,6 +29,7 @@ BASE_DIRECTORY = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAF
 INPUT_PATH = (
     BASE_DIRECTORY
     / "raw_dataset"
+    / f"{YEAR}"
     / f"{DATE}01_Production"
     / f"{DATE}01_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv"
 )
@@ -35,6 +38,7 @@ INPUT_PATH = (
 OUTPUT_PATH = (
     BASE_DIRECTORY
     / "ficheros_tratados"
+    / f"{YEAR}"
     / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR.xlsx"
 )  # naming 20240901_Equities_feed_IssuerLevel_sinOVR
 
