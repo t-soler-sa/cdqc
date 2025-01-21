@@ -24,12 +24,13 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
 
 # Array of scripts to run
 SCRIPTS=(
-    "01_overrides_clarityid.py"
-    "01_overrides_permid.py"
-    "02_apply_ow.py"
-    "03_remove_duplicates_with_ovr.py"
-    "04_noncomplience.py"
-    "05_impact_analysis.py"
+    "scripts/01_overrides_clarityid.py"
+    "scripts/01_overrides_permid.py"
+    "scripts/02_apply_ow.py"
+    "scripts/03_remove_duplicates_with_ovr.py"
+    "scripts/04_noncomplience.py"
+    "scripts/05_impact_analysis.py"
+    "scripts/split_datafeed_by_region.py"
 )
 
 # Activate virtual environment
@@ -49,23 +50,6 @@ for script in "${SCRIPTS[@]}"; do
 done
 
 echo "All Python scripts completed successfully"
-
-# Run the split_datafeed_by_region.sh script
-SPLIT_SCRIPT="${BASE_DIR}/shell_scripts/split_datafeed_by_region.sh"
-
-echo "Running $SPLIT_SCRIPT"
-# Pass the DATE as an environment variable to the script
-export USER_DATE="$DATE"
-bash "$SPLIT_SCRIPT"
-
-# Check if the split script executed successfully
-if [ $? -ne 0 ]; then
-    echo "Error occurred while running $SPLIT_SCRIPT"
-    unset USER_DATE  # Clean up environment variable
-    deactivate  # Deactivate virtual environment before exiting
-    exit 1
-fi
-
 echo "Data pipeline completed successfully"
 
 # Calculate and display the total execution time
