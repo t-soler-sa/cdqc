@@ -39,7 +39,7 @@ OUTPUT_PATH = (
     BASE_DIRECTORY
     / "ficheros_tratados"
     / f"{YEAR}"
-    / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR.xlsx"
+    / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR"
 )  # naming 20240901_Equities_feed_IssuerLevel_sinOVR
 
 logging.info("Loading raw dataset")
@@ -57,6 +57,7 @@ df_2 = df.drop_duplicates(subset=["permid"])
 logging.info("Saving dataset at issuer level on a csv file")
 csv_output_path = OUTPUT_PATH.with_suffix(".csv")
 df_2.to_csv(csv_output_path, index=False)
+logging.info(f"Saved to {csv_output_path}")
 
 # logging.info("Saving dataset at issuer level on an Excel file")
 ## Save to OUTPUT_PATH as excel file
