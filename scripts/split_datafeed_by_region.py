@@ -65,4 +65,4 @@ run_time = end - start
 # format run time XX min XX sec
 minutes = int(run_time // 60)
 seconds = int(run_time % 60)
-logging.info(f"Script took {minutes} and {seconds} seconds to run")
+logging.info(f"Script took {minutes} minuts and {seconds} seconds to run")
