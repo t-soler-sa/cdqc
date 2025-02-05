@@ -24,13 +24,13 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
 
 # Array of scripts to run
 SCRIPTS=(
-    "scripts/01_overrides_clarityid.py"
-    "scripts/01_overrides_permid.py"
-    "scripts/02_apply_ow.py"
-    "scripts/03_remove_duplicates_with_ovr.py"
-    "scripts/04_noncomplience.py"
-    "scripts/05_impact_analysis.py"
-    "scripts/split_datafeed_by_region.py"
+    "01_overrides_clarityid.py"
+    "01_overrides_permid.py"
+    "02_apply_ow.py"
+    "03_remove_duplicates_with_ovr.py"
+    "04_noncomplience.py"
+    "05_impact_analysis.py"
+    "split_datafeed_by_region.py"
 )
 
 # Activate virtual environment
@@ -44,7 +44,6 @@ for script in "${SCRIPTS[@]}"; do
     # Check if the script executed successfully
     if [ $? -ne 0 ]; then
         echo "Error occurred while running $script"
-        deactivate  # Deactivate virtual environment before exiting
         exit 1
     fi
 done
