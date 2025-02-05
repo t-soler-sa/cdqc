@@ -52,8 +52,9 @@ OUTPUT_PATH = None
 
 def setup_paths(date):
     global DATAFEED_PATH, OW_BASE_PATH, OUTPUT_PATH
+    YEAR = date[:4]
     DATAFEED_PATH = Path(
-        rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\raw_dataset\{date}01_Production\{date}01_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv"
+        rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\raw_dataset\{YEAR}\{date}01_Production\{date}01_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv"
     )
     OW_BASE_PATH = Path(
         rf"C:\Users\n740789\Documents\Projects_local\DataSets\overrides\{date}_OVR_permid"

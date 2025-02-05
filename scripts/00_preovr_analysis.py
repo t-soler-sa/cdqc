@@ -130,6 +130,7 @@ def finalize_delta(delta: pd.DataFrame, test_col: List[str]) -> pd.DataFrame:
 def main():
     # Get user input for date
     DATE = get_date()
+    YEAR = DATE[:4]
     date_obj = datetime.strptime(DATE, "%Y%m")
     prev_date_obj = date_obj - relativedelta(months=1)
     DATE_PREV = prev_date_obj.strftime("%Y%m")
@@ -153,8 +154,8 @@ def main():
         "str_003b_ec",
     ]
 
-    df_1_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{DATE_PREV}01_Equities_feed_IssuerLevel_sinOVR.csv"
-    df_2_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
+    df_1_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{YEAR}\{DATE_PREV}01_Equities_feed_IssuerLevel_sinOVR.csv"
+    df_2_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{YEAR}\{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
 
     columns_to_read = ["permid", "isin", "issuer_name"] + test_col
 
