@@ -93,7 +93,9 @@ def process_overwrites(year_month: str, base_dir: Path, input_file: Path):
         "MotivoPrinc",
         "MotivoSec",
         "Detalle",
+        "Fecha aplicación OVR",
     ]
+
     overwrites_df.columns = columns
 
     overwrites = {
