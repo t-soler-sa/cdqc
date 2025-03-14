@@ -1,62 +1,36 @@
+import argparse
 import logging
 import sys
-from datetime import datetime
-from typing import List, Tuple
 import warnings
+from datetime import datetime
+from pathlib import Path
+from typing import List, Tuple
+from itertools import chain
 
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+from utils.dataloaders import (
+    load_clarity_data,
+    load_aladdin_data,
+    load_crossreference,
+    load_portfolios,
+    load_overrides,
 )
-# Suppress the specific warning
+
+from utils.get_date import get_date
+from utils.set_up_log import set_up_log
+
+# Set up logging
+logger = set_up_log("Pre-OVR-Analysis")
+
+
+# Use get_date to obtain a date string
+date_str = get_date()
+
+# Ignore workbook warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
-
-
-# Define a function to validate the date format
-def validate_date(date_string):
-    try:
-        datetime.strptime(date_string, "%Y%m")
-        return True
-    except ValueError:
-        return False
-
-
-# Define a function to get the date from user input
-def get_date():
-    if len(sys.argv) > 1 and validate_date(sys.argv[1]):
-        return sys.argv[1]
-    else:
-        while True:
-            date_input = input("Enter the date in YYYYMM format: ")
-            if validate_date(date_input):
-                return date_input
-            print("Invalid date format. Please use YYYYMM.")
-
-
-def load_clarity_data(file_path: str, columns: List[str]) -> pd.DataFrame:
-    """Load data from CSV file."""
-    pd.read_csv(file_path, sep=",", dtype="unicode", usecols=columns)
-
-
-def load_aladdin_data(file_path: str, sheet_name: str) -> pd.DataFrame:
-    """Load data from CSV file."""
-    df = pd.read_excel(file_path, dtype="unicode", sheet_name=sheet_name, skiprows=3)
-    df.columns = df.columns.str.lower().str.strip().str.replace(" ", "_")
-    return df
-
-
-def load_crossreference(file_path: str) -> pd.DataFrame:
-    """Load cross reference from CSV file."""
-    df = pd.read_csv(file_path, dtype={"CLARITY_AI": str})
-    df.columns = df.columns.str.lower().str.strip().str.replace(" ", "_")
-    df.rename(
-        columns={"clarity_ai": "permid", "aladdin_issuer": "aladdin_id"}, inplace=True
-    )
-    return df
 
 
 def prepare_dataframes(
@@ -179,19 +153,63 @@ def main():
     ]
 
     # DEFINE PATHS
-    df_1_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\datafeeds_with_ovr\{DATE_PREV}_df_issuer_level_with_ovr.csv"
-    df_2_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\ficheros_tratados\{YEAR}\{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
-    aladdin_path = rf"C:\Users\n740789\Documents\clarity_data_quality_controls\excel_books\aladdin_data\{DATE}_strategies_snt world_portf_bmks.xlsx"
-    crossreference_path = rf"C:\Users\n740789\Documents\Projects_local\DataSets\crossreference\Aladdin_Clarity_CrossReference_{DATE}01.csv"
+    REPO_DIR = Path(r"C:\Users\n740789\Documents\clarity_data_quality_controls")
+    DATAFEED_DIR = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED")
+    df_1_path = (
+        DATAFEED_DIR
+        / "datafeeds_with_ovr"
+        / f"{DATE_PREV}_df_issuer_level_with_ovr.csv"
+    )
+    df_2_path = (
+        DATAFEED_DIR
+        / "ficheros_tratados"
+        / f"{YEAR}"
+        / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
+    )
+    ALADDIN_DATA_DIR = REPO_DIR / "excel_books" / "aladdin_data"
+    CROSSREFERENCE_PATH = (
+        ALADDIN_DATA_DIR
+        / "crossreference"
+        / f"Aladdin_Clarity_CrossReference_{DATE}01.csv"
+    )
+    BMK_PORTF_STR_PATH = (
+        ALADDIN_DATA_DIR
+        / "bmk_portf_str"
+        / f"{DATE}_strategies_snt world_portf_bmks.xlsx"
+    )
+    SRI_DATA_DIR = REPO_DIR / "excel_books" / "sri_data"
+    OVR_PATH = (
+        REPO_DIR
+        / "excel_books"
+        / "sri_data"
+        / "overrides"
+        / "20250314_override_analysis_subs.xlsx"
+    )
+    COMMITTEE_PATH = (
+        REPO_DIR
+        / "excel_books"
+        / "sri_data"
+        / "portfolios_committees"
+        / "portfolio_lists.xlsx"
+    )
 
+    # LOAD DATA
     columns_to_read = ["permid", "isin", "issuer_name"] + test_col
-
-    # Load data
     df_1 = load_clarity_data(df_1_path, columns_to_read)
     df_2 = load_clarity_data(df_2_path, columns_to_read)
-    carteras = load_aladdin_data(aladdin_path, "portfolio_carteras")
-    benchmark = load_aladdin_data(aladdin_path, "portfolio_benchmarks")
-    crosreference = load_crossreference(crossreference_path)
+    brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
+    brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
+    crosreference = load_crossreference(CROSSREFERENCE_PATH)
+    overrides = load_overrides(OVR_PATH)
+
+    # Load portfolios & benchmarks dicts and lists
+    (
+        portfolios_dict,
+        benchmarks_dict,
+        carteras_list,
+        benchmarks_list,
+        carteras_benchmarks_list,
+    ) = load_portfolios("your_file_path.xlsx")
 
     logging.info(f"df_1 shape: {df_1.shape}, df_2 shape: {df_2.shape}")
 
