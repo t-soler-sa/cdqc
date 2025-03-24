@@ -20,4 +20,6 @@ old_notebooks/explore.ipynb
 
 # ignore the sql populate table file
 database_project/
-database_project/populate_fact_table_clarity_data.sql
+database_project/populate_fact_table_clarity_data.sqllog/*
+scripts/log/remove_duplicates_without_ovr_20250317.log
+scripts/utils/__pycache__
