@@ -1,104 +1,129 @@
-# dataloaders.py
-
-import pandas as pd
-from typing import List, Tuple, Dict, Any
-from itertools import chain
+import logging
 from pathlib import Path
+import pandas as pd
+
+# Module-level logger
+logger = logging.getLogger(__name__)
 
 
 def read_excel(file_path: Path, sheet_name: str) -> pd.DataFrame:
-    """Read the specified sheet from an Excel file into a DataFrame."""
-    return pd.read_excel(file_path, sheet_name=sheet_name)
-
-
-def load_clarity_data(file_path: str, columns: List[str]) -> pd.DataFrame:
-    """Load data from CSV file."""
-    return pd.read_csv(file_path, sep=",", dtype="unicode", usecols=columns)
-
-
-def load_aladdin_data(file_path: str, sheet_name: str) -> pd.DataFrame:
-    """Load data from an Excel file."""
-    df = pd.read_excel(file_path, dtype="unicode", sheet_name=sheet_name, skiprows=3)
-    df.columns = df.columns.str.lower().str.strip().str.replace(" ", "_")
-    return df
-
-
-def load_crossreference(file_path: str) -> pd.DataFrame:
-    """Load cross reference data from CSV file."""
-    df = pd.read_csv(file_path, dtype={"CLARITY_AI": str})
-    df.columns = df.columns.str.lower().str.strip().str.replace(" ", "_")
-    df.rename(
-        columns={"clarity_ai": "permid", "aladdin_issuer": "aladdin_id"}, inplace=True
-    )
-    return df
-
-
-def load_portfolios(
-    path: str,
-) -> Tuple[Dict[str, List[Any]], Dict[str, List[Any]], List[Any], List[Any], List[Any]]:
     """
-    Loads portfolio and benchmark data from an Excel file located at 'path'
-    and returns the following:
-      - portfolios_dict: dictionary of portfolios (lists with 'nan' strings removed)
-      - benchmarks_dict: dictionary of benchmarks (lists with 'nan' strings removed)
-      - carteras_list: flat list of all portfolio items
-      - benchmarks_list: flat list of all benchmark items
-      - carteras_benchmarks_list: concatenation of carteras_list and benchmarks_list
+    Read the specified sheet from an Excel file into a DataFrame.
 
     Parameters:
-        path (str): The file path to the Excel workbook.
+        file_path (Path): Path to the Excel file.
+        sheet_name (str): Name of the sheet to read.
 
     Returns:
-        tuple: A tuple containing:
-            - portfolios_dict (dict)
-            - benchmarks_dict (dict)
-            - carteras_list (list)
-            - benchmarks_list (list)
-            - carteras_benchmarks_list (list)
+        pd.DataFrame: DataFrame containing the data from the sheet.
     """
-    # Read the Excel sheets using the provided path
-    portfolios = pd.read_excel(path, sheet_name="portfolio_carteras", dtype=str)
-    benchmarks = pd.read_excel(path, sheet_name="portfolio_benchmarks", dtype=str)
-
-    # Convert DataFrames to dicts with list values
-    portfolios_dict = portfolios.to_dict(orient="list")
-    benchmarks_dict = benchmarks.to_dict(orient="list")
-
-    # Remove 'nan' strings from the lists in the dictionaries
-    portfolios_dict = {
-        k: [x for x in v if str(x) != "nan"] for k, v in portfolios_dict.items()
-    }
-    benchmarks_dict = {
-        k: [x for x in v if str(x) != "nan"] for k, v in benchmarks_dict.items()
-    }
-
-    # Create flat lists for portfolios and benchmarks, and a combined list
-    carteras_list = list(chain(*portfolios_dict.values()))
-    benchmarks_list = list(chain(*benchmarks_dict.values()))
-    carteras_benchmarks_list = carteras_list + benchmarks_list
-
-    return (
-        portfolios_dict,
-        benchmarks_dict,
-        carteras_list,
-        benchmarks_list,
-        carteras_benchmarks_list,
-    )
+    logger.info("Attempting to read Excel file: %s, sheet: %s", file_path, sheet_name)
+    try:
+        df = pd.read_excel(file_path, sheet_name=sheet_name)
+    except Exception:
+        logger.exception(
+            "Failed to read Excel file: %s, sheet: %s", file_path, sheet_name
+        )
+        raise
+    logger.info("Successfully read Excel file: %s, sheet: %s", file_path, sheet_name)
+    return df
 
 
-def load_overrides(file_path: str) -> pd.DataFrame:
-    """Load overrides from a CSV file."""
-    target_cols = ["clarityid", "permid", "brs_id", "ovr_target", "ovr_value"]
-    print(f"loading overrides columns {target_cols}")
-    df = pd.read_excel(
-        file_path,
-        usecols=target_cols,
-        dtype={
-            "clarityid": str,
-            "permid": str,
-            "brs_id": str,
-            "ovr_target": str,
-            "ovr_value": str,
-        },
-    )
+def load_clarity_data(file_path: Path) -> pd.DataFrame:
+    """
+    Load Clarity data from a CSV file into a DataFrame.
+
+    Parameters:
+        file_path (Path): Path to the CSV file containing Clarity data.
+
+    Returns:
+        pd.DataFrame: DataFrame with the Clarity data.
+    """
+    logger.info("Loading Clarity data from: %s", file_path)
+    try:
+        df = pd.read_csv(file_path)
+    except Exception:
+        logger.exception("Failed to load Clarity data from: %s", file_path)
+        raise
+    logger.info("Successfully loaded Clarity data from: %s", file_path)
+    return df
+
+
+def load_aladdin_data(file_path: Path) -> pd.DataFrame:
+    """
+    Load Aladdin data from a CSV file into a DataFrame.
+
+    Parameters:
+        file_path (Path): Path to the CSV file containing Aladdin data.
+
+    Returns:
+        pd.DataFrame: DataFrame with the Aladdin data.
+    """
+    logger.info("Loading Aladdin data from: %s", file_path)
+    try:
+        df = pd.read_csv(file_path)
+    except Exception:
+        logger.exception("Failed to load Aladdin data from: %s", file_path)
+        raise
+    logger.info("Successfully loaded Aladdin data from: %s", file_path)
+    return df
+
+
+def load_crossreference(file_path: Path) -> pd.DataFrame:
+    """
+    Load Cross Reference data from a CSV file into a DataFrame.
+
+    Parameters:
+        file_path (Path): Path to the CSV file containing cross reference data.
+
+    Returns:
+        pd.DataFrame: DataFrame with the cross reference data.
+    """
+    logger.info("Loading Cross Reference data from: %s", file_path)
+    try:
+        df = pd.read_csv(file_path)
+    except Exception:
+        logger.exception("Failed to load Cross Reference data from: %s", file_path)
+        raise
+    logger.info("Successfully loaded Cross Reference data from: %s", file_path)
+    return df
+
+
+def load_portfolios(file_path: Path) -> pd.DataFrame:
+    """
+    Load Portfolio data from a CSV file into a DataFrame.
+
+    Parameters:
+        file_path (Path): Path to the CSV file containing portfolio data.
+
+    Returns:
+        pd.DataFrame: DataFrame with the portfolio data.
+    """
+    logger.info("Loading Portfolios data from: %s", file_path)
+    try:
+        df = pd.read_csv(file_path)
+    except Exception:
+        logger.exception("Failed to load Portfolios data from: %s", file_path)
+        raise
+    logger.info("Successfully loaded Portfolios data from: %s", file_path)
+    return df
+
+
+def load_overrides(file_path: Path) -> pd.DataFrame:
+    """
+    Load Overrides data from a CSV file into a DataFrame.
+
+    Parameters:
+        file_path (Path): Path to the CSV file containing overrides data.
+
+    Returns:
+        pd.DataFrame: DataFrame with the overrides data.
+    """
+    logger.info("Loading Overrides data from: %s", file_path)
+    try:
+        df = pd.read_csv(file_path)
+    except Exception:
+        logger.exception("Failed to load Overrides data from: %s", file_path)
+        raise
+    logger.info("Successfully loaded Overrides data from: %s", file_path)
     return df
