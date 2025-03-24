@@ -57,8 +57,8 @@ def load_portfolios(
             - carteras_benchmarks_list (list)
     """
     # Read the Excel sheets using the provided path
-    portfolios = pd.read_excel(path, sheet_name="Portfolios", dtype=str)
-    benchmarks = pd.read_excel(path, sheet_name="Benchmarks", dtype=str)
+    portfolios = pd.read_excel(path, sheet_name="portfolio_carteras", dtype=str)
+    benchmarks = pd.read_excel(path, sheet_name="portfolio_benchmarks", dtype=str)
 
     # Convert DataFrames to dicts with list values
     portfolios_dict = portfolios.to_dict(orient="list")
@@ -88,4 +88,17 @@ def load_portfolios(
 
 def load_overrides(file_path: str) -> pd.DataFrame:
     """Load overrides from a CSV file."""
-    return pd.read_csv(file_path)
+    target_cols = ["clarityid", "permid", "brs_id", "ovr_target", "ovr_value"]
+    print(f"loading overrides columns {target_cols}")
+    df = pd.read_excel(
+        file_path,
+        usecols=target_cols,
+        dtype={
+            "clarityid": str,
+            "permid": str,
+            "brs_id": str,
+            "ovr_target": str,
+            "ovr_value": str,
+        },
+    )
+    return df
