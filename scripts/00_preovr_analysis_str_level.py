@@ -1,16 +1,12 @@
-import argparse
-import logging
 import sys
 import os
 import warnings
-from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
 from itertools import chain
 
 import numpy as np
 import pandas as pd
-from dateutil.relativedelta import relativedelta
 
 from utils.dataloaders import (
     load_clarity_data,
@@ -19,23 +15,39 @@ from utils.dataloaders import (
     load_portfolios,
     load_overrides,
 )
-
-from utils.get_date import get_date
-from utils.set_up_log import set_up_log
 from utils.zombie_killer import main as zombie_killer
 
-# Set up logging
-logger = set_up_log("Pre-OVR-Analysis")
+# Import the centralized configuration
+from config import get_config
+
+# Get the common configuration for the Pre-OVR-Analysis script.
+config = get_config("pre-ovr-analysis", interactive=False)
+logger = config["logger"]
+DATE = config["DATE"]
+YEAR = config["YEAR"]
+DATE_PREV = config["DATE_PREV"]
+REPO_DIR = config["REPO_DIR"]
+DATAFEED_DIR = config["DATAFEED_DIR"]
+SRI_DATA_DIR = config["SRI_DATA_DIR"]
+paths = config["paths"]
+
+# Use the paths from config
+df_1_path = paths["PRE_DF_WOVR_PATH"]
+df_2_path = paths["CURRENT_DF_WOUTOVR_PATH"]
+CROSSREFERENCE_PATH = paths["CROSSREFERENCE_PATH"]
+BMK_PORTF_STR_PATH = paths["BMK_PORTF_STR_PATH"]
+OVR_PATH = paths["OVR_PATH"]
+COMMITTEE_PATH = paths["COMMITTEE_PATH"]
+
+# Define the output directory and file based on the configuration.
+OUTPUT_DIR = config["OUTPUT_DIR"]
+OUTPUT_FILE = OUTPUT_DIR / f"{DATE}_pre_ovr_analysis.xlsx"
+
 # Ignore workbook warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
-# DEFINE PATHS AND CONSTANTS
-# Get user input for date
-DATE = get_date()
-YEAR = DATE[:4]
-date_obj = datetime.strptime(DATE, "%Y%m")
-prev_date_obj = date_obj - relativedelta(months=1)
-DATE_PREV = prev_date_obj.strftime("%Y%m")
+# Script-specific constants
+# let's define necessary column lists
 test_col = [
     "str_001_s",
     "str_002_ec",
@@ -56,65 +68,31 @@ test_col = [
 ]
 columns_to_read = ["permid", "isin", "issuer_name"] + test_col
 
-# DEFINE PATHS
-REPO_DIR = Path(r"C:\Users\n740789\Documents\clarity_data_quality_controls")
-DATAFEED_DIR = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED")
-df_1_path = (
-    DATAFEED_DIR / "datafeeds_with_ovr" / f"{DATE_PREV}_df_issuer_level_with_ovr.csv"
-)
-df_2_path = (
-    DATAFEED_DIR
-    / "ficheros_tratados"
-    / f"{YEAR}"
-    / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
-)
-ALADDIN_DATA_DIR = REPO_DIR / "excel_books" / "aladdin_data"
-CROSSREFERENCE_PATH = (
-    ALADDIN_DATA_DIR / "crossreference" / "Aladdin_Clarity_Issuers_{DATE}01.csv"
-)
-BMK_PORTF_STR_PATH = (
-    ALADDIN_DATA_DIR / "bmk_portf_str" / f"{DATE}_strategies_snt world_portf_bmks.xlsx"
-)
-SRI_DATA_DIR = REPO_DIR / "excel_books" / "sri_data"
-OVR_PATH = (
-    REPO_DIR / "excel_books" / "sri_data" / "overrides" / "20250318_overrides_db.xlsx"
-)
-COMMITTEE_PATH = (
-    REPO_DIR
-    / "excel_books"
-    / "sri_data"
-    / "portfolios_committees"
-    / "portfolio_lists.xlsx"
-)
-OUTPUT_DIR = SRI_DATA_DIR / "pre_ovr_analysis"
-# Define the full path for the output file
-OUTPUT_FILE = OUTPUT_DIR / f"{DATE}_pre_ovr_analysis.xlsx"
-
 
 # DEFINE FUNCTIONS
 def prepare_dataframes(
     df1: pd.DataFrame, df2: pd.DataFrame
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Prepare DataFrames by setting index and filtering for common indexes.
+    Prepare DataFrames by setting the index and filtering for common indexes.
     Logs info about common, new, and missing indexes.
     """
     # Set index to 'permid' if it exists, otherwise assume it's already the index.
     if "permid" in df1.columns:
         df1 = df1.set_index("permid")
     else:
-        logging.warning("df1 does not contain a 'permid' column. Using current index.")
+        logger.warning("df1 does not contain a 'permid' column. Using current index.")
 
     if "permid" in df2.columns:
         df2 = df2.set_index("permid")
     else:
-        logging.warning("df2 does not contain a 'permid' column. Using current index.")
+        logger.warning("df2 does not contain a 'permid' column. Using current index.")
 
     common_indexes = df1.index.intersection(df2.index)
     new_indexes = df2.index.difference(df1.index)
     missing_indexes = df1.index.difference(df2.index)
 
-    logging.info(f"Number of common indexes: {len(common_indexes)}")
+    logger.info(f"Number of common indexes: {len(common_indexes)}")
 
     return (
         df1.loc[common_indexes],
@@ -127,11 +105,11 @@ def prepare_dataframes(
 def compare_dataframes(
     df1: pd.DataFrame, df2: pd.DataFrame, test_col: List[str]
 ) -> pd.DataFrame:
-    """Compare DataFrames and create delta DataFrame."""
+    """Compare DataFrames and create a delta DataFrame."""
     delta = df2.copy()
     for col in test_col:
         if col in df1.columns and col in df2.columns:
-            logging.info(f"Comparing column: {col}")
+            logger.info(f"Comparing column: {col}")
             diff_mask = df1[col] != df2[col]
             delta.loc[~diff_mask, col] = np.nan
     return delta
@@ -162,14 +140,14 @@ def get_inclusion_list(
 def check_new_exclusions(
     df1: pd.DataFrame, df2: pd.DataFrame, delta: pd.DataFrame, test_col: List[str]
 ) -> pd.DataFrame:
-    """Check for new exclusions and update delta DataFrame."""
+    """Check for new exclusions and update the delta DataFrame."""
     delta["new_exclusion"] = False
     for col in test_col:
         if col in df1.columns and col in df2.columns:
-            logging.info(f"Checking for new exclusions in column: {col}")
+            logger.info(f"Checking for new exclusions in column: {col}")
             mask = (df1[col] != "EXCLUDED") & (df2[col] == "EXCLUDED")
             delta.loc[mask, "new_exclusion"] = True
-            logging.info(f"Number of new exclusions in {col}: {mask.sum()}")
+            logger.info(f"Number of new exclusions in {col}: {mask.sum()}")
     delta["exclusion_list"] = delta.apply(
         lambda row: get_exclusion_list(row, df1, test_col), axis=1
     )
@@ -179,14 +157,14 @@ def check_new_exclusions(
 def check_new_inclusions(
     df1: pd.DataFrame, df2: pd.DataFrame, delta: pd.DataFrame, test_col: List[str]
 ) -> pd.DataFrame:
-    """Check for new inclusions and update delta DataFrame."""
+    """Check for new inclusions and update the delta DataFrame."""
     delta["new_inclusion"] = False
     for col in test_col:
         if col in df1.columns and col in df2.columns:
-            logging.info(f"Checking for new inclusions in column: {col}")
+            logger.info(f"Checking for new inclusions in column: {col}")
             mask = (df1[col] == "EXCLUDED") & (df2[col] != "EXCLUDED")
             delta.loc[mask, "new_inclusion"] = True
-            logging.info(f"Number of new inclusions in {col}: {mask.sum()}")
+            logger.info(f"Number of new inclusions in {col}: {mask.sum()}")
     delta["inclusion_list"] = delta.apply(
         lambda row: get_inclusion_list(row, df1, test_col), axis=1
     )
@@ -194,10 +172,10 @@ def check_new_inclusions(
 
 
 def finalize_delta(delta: pd.DataFrame, test_col: List[str]) -> pd.DataFrame:
-    """Finalize delta DataFrame by removing unchanged rows and resetting index."""
+    """Finalize the delta DataFrame by removing unchanged rows and resetting the index."""
     delta = delta.dropna(subset=test_col, how="all")
     delta.reset_index(inplace=True)
-    logging.info(f"Final delta shape: {delta.shape}")
+    logger.info(f"Final delta shape: {delta.shape}")
     return delta
 
 
@@ -216,7 +194,7 @@ def main():
     # sri/ESG Team data
     overrides = load_overrides(OVR_PATH)
 
-    # Load portfolios & benchmarks dicts and lists
+    # Load portfolios and benchmarks data (using a placeholder file path).
     (
         portfolios_dict,
         benchmarks_dict,
@@ -225,44 +203,35 @@ def main():
         carteras_benchmarks_list,
     ) = load_portfolios("your_file_path.xlsx")
 
-    logging.info(f"df_1 shape: {df_1.shape}, df_2 shape: {df_2.shape}")
+    logger.info(f"df_1 shape: {df_1.shape}, df_2 shape: {df_2.shape}")
 
-    (
-        df_1,
-        df_2,
-        new_issuer,
-        out_issuer,
-    ) = prepare_dataframes(df_1, df_2)
-
-    # log size of new and missing issuers
-    logging.info(f"Number of new issuers: {new_issuer.shape[0]}")
-    logging.info(f"Number of missing issuers: {out_issuer.shape[0]}")
+    df_1, df_2, new_issuer, out_issuer = prepare_dataframes(df_1, df_2)
+    # Log the size of new and missing issuers
+    logger.info(f"Number of new issuers: {new_issuer.shape[0]}")
+    logger.info(f"Number of missing issuers: {out_issuer.shape[0]}")
 
     delta = compare_dataframes(df_1, df_2, test_col)
-
     delta = check_new_exclusions(df_1, df_2, delta, test_col)
     delta = check_new_inclusions(df_1, df_2, delta, test_col)
-
     delta = finalize_delta(delta, test_col)
 
-    logging.info("Getting zombie analysis df")
+    logger.info("Getting zombie analysis df")
     zombie_df = zombie_killer()
 
-    # Create the directory if it does not exist
+    # Create the output directory if it does not exist.
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
         print(f"Created directory: {OUTPUT_DIR}")
     else:
         print(f"Directory already exists: {OUTPUT_DIR}")
 
-    # save zombie_df and delta to excel file in 2 sheets
+    # Save zombie_df and delta to an Excel file with two sheets.
     with pd.ExcelWriter(OUTPUT_FILE) as writer:
         delta.to_excel(writer, sheet_name="pre_ovr_analysis", index=False)
         zombie_df.to_excel(writer, sheet_name="zombie_analysis", index=False)
 
-    logging.info(f"Results saved to {OUTPUT_FILE}")
-
-    logging.info("Analysis completed successfully.")
+    logger.info(f"Results saved to {OUTPUT_FILE}")
+    logger.info("Analysis completed successfully.")
 
 
 if __name__ == "__main__":
