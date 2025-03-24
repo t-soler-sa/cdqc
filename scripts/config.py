@@ -40,8 +40,8 @@ def get_config(script_name: str = "default", interactive: bool = True) -> dict:
     DATE_PREV = prev_date_obj.strftime("%Y%m")
 
     # Define common paths
-    # REPO_DIR is derived relative to this script.
-    REPO_DIR = Path(__file__).resolve().parent
+    # REPO_DIR is derived relative to this script to get the repository's path.
+    REPO_DIR = Path(__file__).resolve().parent.parent
     # DATAFEED_DIR is taken from an enviroment variable (with a fallback if needed)
     DATAFEED_DIR = Path(
         os.getenv(
