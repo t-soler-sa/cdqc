@@ -26,3 +26,8 @@ scripts/utils/__pycache__
 
 # Ignore the delta_*.csv files
 delta_*.csv
+
+# ignore content of dir log
+log/*
+# except the file log/logconfig.log
+!log/logconfig.log
