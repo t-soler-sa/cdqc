@@ -12,7 +12,7 @@ import pandas as pd
 
 
 # add remove warnign for openpyxl
-@contextmanager
+@contextmanager  # This is a context manager that suppresses the warning
 def suppress_openpyxl_warning():
     with warnings.catch_warnings():
         warnings.filterwarnings(
@@ -29,8 +29,9 @@ def setup_logging():
     )
 
 
-def measure_time(func):
-    @wraps(func)
+# Define a decorator to measure the time taken by a function
+def measure_time(func) -> callable:
+    @wraps(func)  # This is used to preserve the metadata of the original function
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
@@ -39,11 +40,12 @@ def measure_time(func):
         logging.info(f"Total execution time: {execution_time:.2f} seconds")
         return result
 
+    # Return the wrapper function
     return wrapper
 
 
 # Define a function to validate the date format
-def validate_date(date_string):
+def validate_date(date_string: str) -> bool:
     try:
         datetime.strptime(date_string, "%Y%m")
         return True
@@ -69,7 +71,7 @@ def get_date():
                 return date_input
             print("Invalid date format. Please use YYYYMM.")
 
-
+# Define a function to reorder columns moving to the end columns starting with "str_", "art_" and "sustainability_"
 def reorder_columns(df):
     cols = df.columns.tolist()
     start_cols = [
@@ -96,14 +98,20 @@ def reorder_columns(df):
 def analysis(input_file: str, output_file: str, datafeed_col: list, date: str):
     logging.info(f"Generating Impact Analysis for {input_file}")
 
-    # READ DATASETS
+    # Define base directories
+    base_dir = Path("C:/Users/n740789/Documents/Projects_local/DataSets")
+    crossreference_dir = base_dir / "crossreference"
+    crossreference_path = crossreference_dir / f"Aladdin_Clarity_Issuers_{date}01.csv"
+    datafeed_dir = base_dir / "DATAFEED/datafeeds_with_ovr"
+    datafeed_path = datafeed_dir / f"{date}_df_issuer_level_with_ovr.csv"
+
     # LOAD DATASETS & MODIFY COLUMN NAMES
     logging.info("Loading crossreference")
-    cross = pd.read_csv(
-        f"C:\\Users\\n740789\\Documents\\Projects_local\\DataSets\\crossreference\\Aladdin_Clarity_Issuers_{date}01.csv",
+    crossreference = pd.read_csv(
+        crossreference_path,
         dtype={"CLARITY_AI": str},
     )
-    cross.rename(
+    crossreference.rename(
         columns={"Aladdin_Issuer": "issuer_id", "CLARITY_AI": "permid"}, inplace=True
     )
     logging.info("Crossreference loaded")
@@ -111,7 +119,7 @@ def analysis(input_file: str, output_file: str, datafeed_col: list, date: str):
     # read datafeed
     logging.info("Loading datafeed")
     df = pd.read_csv(
-        f"C:\\Users\\n740789\\Documents\\Projects_local\\DataSets\\DATAFEED\\datafeeds_with_ovr\\{date}_df_issuer_level_with_ovr.csv",
+        datafeed_path,
         usecols=datafeed_col,
         dtype=str,
     )
@@ -128,15 +136,17 @@ def analysis(input_file: str, output_file: str, datafeed_col: list, date: str):
     logging.info("Aladdin Workbench file loaded")
 
     # PROCESS DATASETS
+    # add permid to portfolio and benchmark from crossreference
     logging.info("adding permid to portfolios and benchmarks")
     portfolio = pd.merge(
-        portfolio, cross[["issuer_id", "permid"]], how="left", on="issuer_id"
+        portfolio, crossreference[["issuer_id", "permid"]], how="left", on="issuer_id"
     )
     benchmark = pd.merge(
-        benchmark, cross[["issuer_id", "permid"]], how="left", on="issuer_id"
+        benchmark, crossreference[["issuer_id", "permid"]], how="left", on="issuer_id"
     )
     logging.info("permid added successfully")
 
+    # add datafeed columns to portfolio and benchmark with suffixes "_current" and "_new"
     logging.info(f"adding datafeed columns to portfolio and benchmark")
     portfolio = pd.merge(
         portfolio, df, how="left", on="permid", suffixes=("_current", "_new")
@@ -146,6 +156,7 @@ def analysis(input_file: str, output_file: str, datafeed_col: list, date: str):
     )
     logging.info("datafeed columns added")
 
+    # reordering columns
     logging.info("reordering columns")
     portfolio = reorder_columns(portfolio)
     benchmark = reorder_columns(benchmark)
