@@ -23,3 +23,6 @@ database_project/
 database_project/populate_fact_table_clarity_data.sqllog/*
 scripts/log/remove_duplicates_without_ovr_20250317.log
 scripts/utils/__pycache__
+
+# Ignore the delta_*.csv files
+delta_*.csv
