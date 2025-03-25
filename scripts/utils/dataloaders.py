@@ -3,6 +3,7 @@ import re
 from itertools import chain
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from datetime import datetime
 
 import pandas as pd
 
@@ -257,3 +258,36 @@ def load_overrides(file_path: Path) -> pd.DataFrame:
         logger.exception(f"Failed to load overrides from: {file_path}")
         raise
     return df
+
+
+# define a function to save results in an Excel file
+def save_excel(df_dict: dict, output_dir: Path, file_name: str) -> Path:
+    """
+    Writes multiple DataFrames to an Excel file with each DataFrame in a separate sheet.
+
+    Parameters:
+    - df_dict (dict): A dictionary where keys are sheet names and values are DataFrames.
+    - output_dir (Path): The directory where the Excel file will be saved.
+    - file_name (str): The base name for the Excel file.
+
+    Returns:
+    - Path: The full path to the saved Excel file.
+    """
+    # Create a date string in "YYYYMMDD" format
+    date_str = datetime.datetime.now().strftime("%Y%m%d")
+
+    # Ensure the output directory exists
+    logger.info("Creating output directory: %s", output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Construct the full output file path (e.g., file_name_YYYYMMDD.xlsx)
+    output_file = output_dir / f"{date_str}_{file_name}.xlsx"
+
+    # Write each DataFrame to its own sheet with index set to False
+    with pd.ExcelWriter(output_file) as writer:
+        logger.info("Writing DataFrames to Excel file: %s", output_file)
+        for sheet_name, df in df_dict.items():
+            logger.info("Writing sheet: %s", sheet_name)
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+    logger.info("Results saved to Excel file: %s", output_file)
