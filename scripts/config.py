@@ -70,7 +70,7 @@ def get_config(script_name: str = "default", interactive: bool = True) -> dict:
         / "aladdin_data"
         / "bmk_portf_str"
         / f"{DATE}_strategies_snt world_portf_bmks.xlsx",
-        "OVR_PATH": SRI_DATA_DIR / "overrides" / "20250318_overrides_db.xlsx",
+        "OVR_PATH": SRI_DATA_DIR / "overrides" / "overrides_db.xlsx",
         "COMMITTEE_PATH": REPO_DIR
         / "excel_books"
         / "sri_data"
