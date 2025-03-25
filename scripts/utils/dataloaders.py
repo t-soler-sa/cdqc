@@ -377,7 +377,7 @@ def save_excel(df_dict: dict, output_dir: Path, file_name: str) -> Path:
     - Path: The full path to the saved Excel file.
     """
     # Create a date string in "YYYYMMDD" format
-    date_str = datetime.datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now().strftime("%Y%m%d")
 
     # Ensure the output directory exists
     logger.info("Creating output directory: %s", output_dir)
