@@ -1,14 +1,53 @@
 import logging
-from pathlib import Path
-import pandas as pd
-from typing import List, Tuple, Dict, Any
+import re
 from itertools import chain
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
+import pandas as pd
 
 # Module-level logger
 logger = logging.getLogger(__name__)
 
 
-def read_excel(file_path: Path, sheet_name: str) -> pd.DataFrame:
+# define aux functions to clean columns and convert id columns into string
+def clean_columns(columns):
+    """
+    Standardizes a list of column names:
+    - Strips leading/trailing whitespace.
+    - Converts to lowercase.
+    - Replaces any sequence of whitespace (including newlines) with a single underscore.
+    """
+    return [re.sub(r"\s+", "_", col.strip().lower()) for col in columns]
+
+
+def convert_id_columns(df):
+    """
+    Converts columns that end with '_id' or 'id' to string dtype,
+    if they are not already strings.
+    """
+    pattern = re.compile(r"(_)?id$", re.IGNORECASE)
+    for column in df.columns:
+        if pattern.search(column) and not pd.api.types.is_string_dtype(df[column]):
+            logger.info(f"Converting column '{column}' to string.")
+            df[column] = df[column].astype(str)
+    return df
+
+
+def clean_and_convert(df):
+    """
+    First standardizes the DataFrame's column names, then converts any
+    id columns to string dtype.
+    """
+    df.columns = clean_columns(df.columns)
+    df = convert_id_columns(df)
+    return df
+
+
+# define functions to load data from different sources
+def load_excel(
+    file_path: Path, sheet_name: str, clean_n_convert: bool = True
+) -> pd.DataFrame:
     """
     Read the specified sheet from an Excel file into a DataFrame.
 
@@ -22,13 +61,24 @@ def read_excel(file_path: Path, sheet_name: str) -> pd.DataFrame:
     logger.info("Attempting to read Excel file: %s, sheet: %s", file_path, sheet_name)
     try:
         df = pd.read_excel(file_path, sheet_name=sheet_name)
+        logger.info(
+            "Successfully read Excel file: %s, sheet: %s", file_path, sheet_name
+        )
     except Exception:
         logger.exception(
             "Failed to read Excel file: %s, sheet: %s", file_path, sheet_name
         )
         raise
-    logger.info("Successfully read Excel file: %s, sheet: %s", file_path, sheet_name)
-    return df
+    if clean_n_convert:
+        try:
+            logger.info("Succesfully loaded a clean and converted the DataFrame.")
+            return clean_and_convert(df)
+        except Exception:
+            logger.exception("Failed to clean and convert the DataFrame.")
+            raise
+    else:
+        logger.info("Succesfully loaded the DataFrame.")
+        return df
 
 
 def load_clarity_data(file_path: Path, target_cols: list[str] = None) -> pd.DataFrame:
@@ -46,9 +96,22 @@ def load_clarity_data(file_path: Path, target_cols: list[str] = None) -> pd.Data
     logger.info("Loading Clarity data from: %s", file_path)
     try:
         if target_cols:
-            df = pd.read_csv(file_path, usecols=target_cols)
+            df = pd.read_csv(
+                file_path, usecols=target_cols, dtype={"permid": str, "isin": str}
+            )
         else:
-            df = pd.read_csv(file_path)
+            df = pd.read_csv(
+                file_path,
+                dtype={
+                    "permid": str,
+                    "permId": str,
+                    "isin": str,
+                    "ISIN": str,
+                    "ClarityID": str,
+                    "clarityid": str,
+                },
+            )
+            df.columns = clean_columns(df.columns)
     except Exception:
         logger.exception("Failed to load Clarity data from: %s", file_path)
         raise
@@ -72,33 +135,34 @@ def load_aladdin_data(file_path: Path, sheet_name: str) -> pd.DataFrame:
         df = pd.read_excel(
             file_path, dtype="unicode", sheet_name=sheet_name, skiprows=3
         )
+        logger.info(f"Cleaning columns and converting data types for {sheet_name}")
+        df = clean_and_convert(df)
     except Exception:
         logger.exception(f"Failed to load {sheet_name} data from {file_path}")
         raise
-    logger.info(f"editting column names for {sheet_name} data")
-    df.columns = df.columns.str.lower().str.strip().str.replace(" ", "_")
+
     logger.info("Successfully loaded Aladdin data from: %s", file_path)
     return df
 
 
 def load_crossreference(file_path: Path) -> pd.DataFrame:
     """
-    Load Cross Reference data from a CSV file into a DataFrame.
+    Load crossreference data from a CSV file into a DataFrame.
 
     Parameters:
-        file_path (Path): Path to the CSV file containing cross reference data.
+        file_path (Path): Path to the CSV file containing crossreference data.
 
     Returns:
-        pd.DataFrame: DataFrame with the cross reference data and columns renamed
+        pd.DataFrame: DataFrame with the crossreference data and columns renamed
     """
-    logger.info("Loading Cross Reference data from: %s", file_path)
+    logger.info("Loading crossreference data from: %s", file_path)
     try:
-        df = pd.read_csv(file_path, dtype={"CLARITY_AI": str})
+        df = pd.read_csv(file_path, dtype=str)
     except Exception:
-        logger.exception("Failed to load Cross Reference data from: %s", file_path)
+        logger.exception("Failed to load crossreference data from: %s", file_path)
         raise
-    logger.info("editting crossreference's column names")
-    df.columns = df.columns.str.lower().str.strip().str.replace(" ", "_")
+    logger.info("Cleaning columns and renaming crossreference data")
+    df.columns = clean_columns(df.columns)
     df.rename(
         columns={"clarity_ai": "permid", "aladdin_issuer": "aladdin_id"}, inplace=True
     )
