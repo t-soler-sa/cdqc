@@ -2,7 +2,7 @@ import logging
 import re
 from itertools import chain
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 from datetime import datetime
 
 import pandas as pd
@@ -171,72 +171,6 @@ def load_crossreference(file_path: Path) -> pd.DataFrame:
     return df
 
 
-def load_portfolios(
-    path: Path,
-) -> Tuple[Dict[str, List[Any]], Dict[str, List[Any]], List[Any], List[Any], List[Any]]:
-    """
-    Loads portfolio and benchmark data from an Excel file located at 'path'
-    and returns the following:
-      - portfolios_dict: dictionary of portfolios (lists with 'nan' strings removed)
-      - benchmarks_dict: dictionary of benchmarks (lists with 'nan' strings removed)
-      - carteras_list: flat list of all portfolio items
-      - benchmarks_list: flat list of all benchmark items
-      - carteras_benchmarks_list: concatenation of carteras_list and benchmarks_list
-
-    Parameters:
-        path (str): The file path to the Excel workbook.
-
-    Returns:
-        tuple: A tuple containing:
-            - portfolios_dict (dict)
-            - benchmarks_dict (dict)
-            - carteras_list (list)
-            - benchmarks_list (list)
-            - carteras_benchmarks_list (list)
-    """
-    try:
-        # Read the Excel sheets using the provided path
-        logger.info("Loading portfolios portfolio_carteras from: %s", path)
-        portfolios = pd.read_excel(path, sheet_name="portfolio_carteras", dtype=str)
-    except Exception:
-        logger.exception("Failed to load portfolios from: %s", path)
-        raise
-    try:
-        logger.info("Loading benchmarks from: %s", path)
-        benchmarks = pd.read_excel(path, sheet_name="portfolio_benchmarks", dtype=str)
-    except Exception:
-        logger.exception("Failed to load benchmarks from: %s", path)
-        raise
-
-    # Convert DataFrames to dicts with list values
-    logger.info("Converting portfolios and benchmarks to dictionaries")
-    portfolios_dict = portfolios.to_dict(orient="list")
-    benchmarks_dict = benchmarks.to_dict(orient="list")
-
-    # Remove 'nan' strings from the lists in the dictionaries
-    logger.info("Removing 'nan' strings from the lists")
-    portfolios_dict = {
-        k: [x for x in v if str(x) != "nan"] for k, v in portfolios_dict.items()
-    }
-    benchmarks_dict = {
-        k: [x for x in v if str(x) != "nan"] for k, v in benchmarks_dict.items()
-    }
-
-    # Create flat lists for portfolios and benchmarks, and a combined list
-    logger.info("Creating flat lists for portfolios and benchmarks")
-    carteras_list = list(chain(*portfolios_dict.values()))
-    benchmarks_list = list(chain(*benchmarks_dict.values()))
-    carteras_benchmarks_list = carteras_list + benchmarks_list
-
-    return (
-        portfolios_dict,
-        benchmarks_dict,
-        carteras_list,
-        benchmarks_list,
-        carteras_benchmarks_list,
-    )
-
-
 def load_overrides(file_path: Path) -> pd.DataFrame:
     """Load overrides from a CSV file."""
     target_cols = ["clarityid", "permid", "brs_id", "ovr_target", "ovr_value"]
@@ -258,6 +192,175 @@ def load_overrides(file_path: Path) -> pd.DataFrame:
         logger.exception(f"Failed to load overrides from: {file_path}")
         raise
     return df
+
+
+def load_portfolios(
+    path_pb: Path,
+    path_committe: Path,
+    target_cols_portfolio: List[str] = None,
+    target_cols_benchmarks: List[str] = None,
+) -> Tuple[
+    Dict[str, Dict[str, Union[List[str], str]]],
+    Dict[str, Dict[str, Union[List[str], str]]],
+]:
+    """
+    Loads portfolio and benchmark data from an Excel file located at 'path_pb',
+    and loads strategy information from 'path_committe'. Returns two dictionaries:
+    1) portfolio_dict
+    2) benchmark_dict
+
+    Each dictionary maps:
+        - portfolio_id (or benchmark_id) -> {
+              "aladdin_id": list of associated aladdin_ids,
+              "strategy_name": the single strategy name from the 'portfolio_lists.xlsx'
+                               or an empty string if none is found
+          }
+
+    Parameters:
+        path_pb (Path):
+            The file path to the Excel workbook containing the portfolio_carteras
+            and portfolio_benchmarks sheets.
+        path_committe (Path):
+            The file path to the Excel workbook containing the 'Portfolios' and
+            'Benchmarks' sheets that map each ID to a strategy.
+        target_cols_portfolio (list, optional):
+            Columns to read from the portfolio_carteras sheet.
+            Defaults to ["aladdin_id", "portfolio_id"].
+        target_cols_benchmarks (list, optional):
+            Columns to read from the portfolio_benchmarks sheet.
+            Defaults to ["aladdin_id", "benchmark_id"].
+
+    Returns:
+        (portfolio_dict, benchmark_dict): Each a dict of the form:
+            {
+              "<portfolio_id or benchmark_id>": {
+                "aladdin_id": [...],
+                "strategy_name": "STRXXX" or ""
+              },
+              ...
+            }
+    """
+    # 1. Set default columns if none are provided
+    if target_cols_portfolio is None:
+        target_cols_portfolio = ["aladdin_id", "portfolio_id"]
+    if target_cols_benchmarks is None:
+        target_cols_benchmarks = ["aladdin_id", "benchmark_id"]
+
+    # 2. Load the original portfolios and benchmarks from path_pb
+    try:
+        logger.info("Loading portfolios from: %s", path_pb)
+        portfolios = pd.read_excel(
+            path_pb,
+            sheet_name="portfolio_carteras",
+            usecols=target_cols_portfolio,
+            dtype=str,
+            skiprows=3,
+        )
+        portfolios.columns = clean_columns(portfolios.columns)
+    except Exception:
+        logger.exception("Failed to load portfolios from: %s", path_pb)
+        raise
+
+    try:
+        logger.info("Loading benchmarks from: %s", path_pb)
+        benchmarks = pd.read_excel(
+            path_pb,
+            sheet_name="portfolio_benchmarks",
+            usecols=target_cols_benchmarks,
+            dtype=str,
+            skiprows=3,
+        )
+        benchmarks.columns = clean_columns(benchmarks.columns)
+    except Exception:
+        logger.exception("Failed to load benchmarks from: %s", path_pb)
+        raise
+
+    # Remove rows with missing or 'nan' values in aladdin_id or portfolio/benchmark ID
+    portfolios = portfolios.dropna(subset=["aladdin_id", "portfolio_id"])
+    benchmarks = benchmarks.dropna(subset=["aladdin_id", "benchmark_id"])
+
+    # 3. Load the 'Portfolios' sheet from path_committe to build a map: portfolio_id -> strategy_name
+    try:
+        logger.info("Loading strategy data for portfolios from: %s", path_committe)
+        portfolios_strategies = pd.read_excel(
+            path_committe, sheet_name="Portfolios", dtype=str
+        )
+    except Exception:
+        logger.exception("Failed to load 'Portfolios' sheet from: %s", path_committe)
+        raise
+
+    # 4. Build a dictionary: portfolio_id -> strategy_name from the 'Portfolios' sheet
+    #    Each column is a strategy name, and the rows are portfolio IDs for that strategy.
+    portfolio_strategy_map = {}
+    for col in portfolios_strategies.columns:
+        strategy_name = col.strip().lower()
+        # get non-null portfolio IDs in this column
+        ids_in_col = portfolios_strategies[col].dropna().unique()
+        for pid in ids_in_col:
+            pid_str = str(pid).strip()
+            if pid_str not in portfolio_strategy_map:
+                portfolio_strategy_map[pid_str] = strategy_name
+            else:
+                # If a portfolio appears in multiple columns, logg warning and continue
+                logger.warning(
+                    "Portfolio ID '%s' appears in multiple strategies", pid_str
+                )
+                pass
+
+    # 5. Load the 'Benchmarks' sheet from path_committe to build a map: benchmark_id -> strategy_name
+    try:
+        logger.info("Loading strategy data for benchmarks from: %s", path_committe)
+        benchmarks_strategies = pd.read_excel(
+            path_committe, sheet_name="Benchmarks", dtype=str
+        )
+    except Exception:
+        logger.exception("Failed to load 'Benchmarks' sheet from: %s", path_committe)
+        raise
+
+    # 6. Build a dictionary: benchmark_id -> list of strategy_names from the 'Benchmarks' sheet
+    benchmark_strategy_map = {}
+    for col in benchmarks_strategies.columns:
+        strategy_name = col.strip().lower()
+        # get non-null benchmark IDs in this column
+        ids_in_col = benchmarks_strategies[col].dropna().unique()
+        for bid in ids_in_col:
+            bid_str = str(bid).strip()
+            if bid_str not in benchmark_strategy_map:
+                # If first time we see this benchmark, store its strategy in a new list
+                benchmark_strategy_map[bid_str] = [strategy_name]
+            else:
+                # If it already exists, append the new strategy to the list
+                logger.info("Benchmark ID '%s' appears in multiple strategies", bid_str)
+                benchmark_strategy_map[bid_str].append(strategy_name)
+
+    # 7. Group the original portfolios by portfolio_id so we can collect a list of aladdin_ids
+    #    Example: for each portfolio_id, gather all aladdin_ids that map to it
+    portfolio_dict = {}
+    grouped_portfolios = portfolios.groupby("portfolio_id")["aladdin_id"].apply(list)
+
+    for pid, aladdin_ids in grouped_portfolios.items():
+        pid_str = str(pid).strip()
+        # get the strategy name from the map; if not found, empty string
+        strategy_name = portfolio_strategy_map.get(pid_str, "")
+        portfolio_dict[pid_str] = {
+            "aladdin_id": [aid for aid in aladdin_ids if pd.notna(aid)],
+            "strategy_name": strategy_name,
+        }
+
+    # 8. Group the original benchmarks by benchmark_id
+    benchmark_dict = {}
+    grouped_benchmarks = benchmarks.groupby("benchmark_id")["aladdin_id"].apply(list)
+
+    for bid, aladdin_ids in grouped_benchmarks.items():
+        bid_str = str(bid).strip()
+        strategy_name = benchmark_strategy_map.get(bid_str, "")
+        benchmark_dict[bid_str] = {
+            "aladdin_id": [aid for aid in aladdin_ids if pd.notna(aid)],
+            "strategy_name": strategy_name,
+        }
+
+    # 9. Return the two dictionaries
+    return portfolio_dict, benchmark_dict
 
 
 # define a function to save results in an Excel file
