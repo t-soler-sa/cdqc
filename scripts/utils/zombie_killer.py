@@ -1,6 +1,7 @@
 import sys
-from pathlib import Path
 import warnings
+from pathlib import Path
+
 import pandas as pd
 
 # Ensure the parent directory (which contains config.py) is in sys.path.
@@ -11,7 +12,8 @@ if str(parent_dir) not in sys.path:
 
 # Import the centralized configuration
 from config import get_config
-from utils.dataloaders import load_clarity_data, load_aladdin_data, load_crossreference
+from utils.dataloaders import (load_aladdin_data, load_clarity_data,
+                               load_crossreference)
 
 # Get the common configuration for the zombie-killer script.
 config = get_config("zombie-killer", interactive=False)
