@@ -245,6 +245,56 @@ def finalize_delta(
     return delta
 
 
+def override_dict(
+    df: pd.DataFrame = None,
+    id_col: str = "aladdin_id",
+    str_col: str = "ovr_target",
+    ovr_col: str = "ovr_value",
+):
+    """
+    Converts the overrides DataFrame to a dictionary.
+    Args:
+        df (pd.DataFrame): DataFrame containing the overrides.
+        id_col (str): Column name for the identifier.
+        str_col (str): Column name for the strategy.
+        ovr_col (str): Column name for the override value.
+    Returns:
+        dict: Dictionary of overrides.
+    """
+    # 1. Groupd the df by issuer_id
+    grouped = df.groupby(id_col)
+
+    # 2. Initialise the dictionary
+    ovr_dict = {}
+
+    # 3. Iterate over each group (issuer id and its corresponding rows)
+    for id, group_data in grouped:
+        # 3.1. for each issuer id create a dict pairing the strategy and the override value
+        ovr_result = dict(zip(group_data[str_col], group_data[ovr_col]))
+        # 3.2. add the dict to the main dict
+        ovr_dict[id] = ovr_result
+
+    return ovr_dict
+
+
+def add_portfolio_info_to_df(portfolio_dict, delta_df):
+    # Build a reverse lookup dictionary: aladdin_id -> [portfolio_id, strategy_name]
+    aladdin_to_info = {}
+    for portfolio_id, data in portfolio_dict.items():
+        strategy = data.get("strategy_name")
+        for a_id in data.get("aladdin_id", []):
+            # If the same aladdin_id appears multiple times for a portfolio,
+            # this assignment is idempotent.
+            aladdin_to_info[a_id] = [portfolio_id, strategy]
+
+    # Add a new column to the DataFrame by mapping the 'aladdin_id' to its portfolio info.
+    delta_df["affected_portfolio_str"] = delta_df["aladdin_id"].apply(
+        lambda x: aladdin_to_info.get(x)
+    )
+
+    return delta_df
+
+
 # TO DO define function to add override and aladdin data
 
 
@@ -254,24 +304,26 @@ def main():
     # clarity data
     df_1 = load_clarity_data(df_1_path, columns_to_read)  # we need overrides
     df_2 = load_clarity_data(df_2_path, columns_to_read)
+    logger.info(
+        f"previous clarity df's  rows: {df_1.shape[0]}, new clarity df's rows: {df_2.shape[0]}"
+    )
     # aladdin /brs data / perimetros
     brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
     brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
     crosreference = load_crossreference(CROSSREFERENCE_PATH)
-    # sri/ESG Team data
+    # ESG Team data: Overrides & Portfolios
     overrides = load_overrides(OVR_PATH)
-    # Load portfolios and benchmarks data (using a placeholder file path).
+    override_dict = override_dict(overrides)
+    # Load portfolios & benchmarks dicts
     (
-        portfolios_dict,
-        benchmarks_dict,
-        carteras_list,
-        benchmarks_list,
-        carteras_benchmarks_list,
-    ) = load_portfolios(BMK_PORTF_STR_PATH)
+        portfolio_dict,
+        benchmark_dict,
+    ) = load_portfolios(path_pb=BMK_PORTF_STR_PATH, path_committe=COMMITTEE_PATH)
 
     # PREP DATA FOR ANALYSIS
     # rename column brs_id to aladdin_id
     overrides.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
+    ovr_dict = override_dict(overrides)
     # add aladdin_id to df_1 and df_2
     logger.info("Adding aladdin_id to clarity dfs")
     df_1 = df_1.merge(crosreference[["permid", "aladdin_id"]], on="permid", how="left")
@@ -333,11 +385,25 @@ def main():
     logger.info("Getting zombie analysis df")
     zombie_df = zombie_killer()
 
+    # PREP DELTAS BEFORE SAVING
+    # use crossreference to add permid to delta_brs
+    delta_brs = delta_brs.merge(
+        crosreference[["aladdin_id", "permid"]], on="aladdin_id", how="left"
+    )
+    # drop isin from delta_clarity
+    delta_clarity.drop(columns=["isin"], inplace=True)
+    # add new column to delta_brs with ovr_dict value using aladdin_id
+    delta_brs["ovr_list"] = delta_brs["aladdin_id"].map(ovr_dict)
+    delta_clarity["ovr_list"] = delta_clarity["aladdin_id"].map(ovr_dict)
+    # let's add portfolio info to the delta_df
+    delta_clarity = add_portfolio_info_to_df(portfolio_dict, delta_clarity)
+    delta_brs = add_portfolio_info_to_df(portfolio_dict, delta_brs)
+
     # create dict of df and df name
     dfs_dict = {
         "zombie_analysis": zombie_df,
-        "preovr_analysis_brs": delta_brs,
-        "preovr_analysis_clarity": delta_clarity,
+        "summary_brs": delta_brs,
+        "summary_clarity": delta_clarity,
     }
 
     # save to excel
