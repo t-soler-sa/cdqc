@@ -72,5 +72,5 @@ def get_output_dir(
         print(f"Error creating directory {output_dir}: {e}")
         raise
 
-    print(f"Output directory is set to: {output_dir}")
+    print(f"Output directory for script {script_name} is set to: {output_dir}")
     return output_dir
