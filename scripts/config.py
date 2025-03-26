@@ -4,14 +4,10 @@ import os
 from pathlib import Path
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from dotenv import load_dotenv
 
 from utils.get_date import get_date
 from utils.set_up_log import set_up_log
 from utils.get_output_dir import get_output_dir
-
-# Load environment variables from .env file
-load_dotenv()
 
 
 def get_config(script_name: str = "default", interactive: bool = True) -> dict:
@@ -43,12 +39,7 @@ def get_config(script_name: str = "default", interactive: bool = True) -> dict:
     # REPO_DIR is derived relative to this script to get the repository's path.
     REPO_DIR = Path(__file__).resolve().parent.parent
     # DATAFEED_DIR is taken from an enviroment variable (with a fallback if needed)
-    DATAFEED_DIR = Path(
-        os.getenv(
-            "DATAFEED_DIR",
-            r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED",
-        )
-    )
+    DATAFEED_DIR = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED")
     SRI_DATA_DIR = REPO_DIR / "excel_books" / "sri_data"
 
     # Define paths that are common for many scripts
