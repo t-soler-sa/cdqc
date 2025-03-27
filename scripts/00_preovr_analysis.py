@@ -34,7 +34,9 @@ paths = config["paths"]
 
 # Use the paths from config
 df_1_path = paths["PRE_DF_WOVR_PATH"]
-df_2_path = paths["CURRENT_DF_WOUTOVR_PATH"]
+df_2_path = (
+    paths["CURRENT_DF_WOUTOVR_PATH"] / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv",
+)
 CROSSREFERENCE_PATH = paths["CROSSREFERENCE_PATH"]
 BMK_PORTF_STR_PATH = paths["BMK_PORTF_STR_PATH"]
 OVR_PATH = paths["OVR_PATH"]
@@ -238,14 +240,14 @@ def finalize_delta(
     target_index: str = "permid",
 ) -> pd.DataFrame:
     """Finalize the delta DataFrame by removing unchanged rows and resetting the index."""
-    delta = delta.dropna(subset=test_col, how="all")
+    delta = delta.dropna(subset=test_col, how="all").copy()
     delta.reset_index(inplace=True)
     delta[target_index] = delta[target_index].astype(str)
     logger.info(f"Final delta shape: {delta.shape}")
     return delta
 
 
-def override_dict(
+def create_override_dict(
     df: pd.DataFrame = None,
     id_col: str = "aladdin_id",
     str_col: str = "ovr_target",
@@ -295,15 +297,16 @@ def add_portfolio_info_to_df(portfolio_dict, delta_df):
     return delta_df
 
 
-# TO DO define function to add override and aladdin data
-
-
 def main():
     logger.info(f"Starting pre-ovr-analysis for {DATE}.")
     # LOAD DATA
     # clarity data
-    df_1 = load_clarity_data(df_1_path, columns_to_read)  # we need overrides
+    df_1 = load_clarity_data(df_1_path, columns_to_read)
     df_2 = load_clarity_data(df_2_path, columns_to_read)
+    # let's rename columns in df_1 and df_2 using the rename_dict
+    df_1.rename(columns=rename_dict, inplace=True)
+    df_2.rename(columns=rename_dict, inplace=True)
+
     logger.info(
         f"previous clarity df's  rows: {df_1.shape[0]}, new clarity df's rows: {df_2.shape[0]}"
     )
@@ -313,7 +316,9 @@ def main():
     crosreference = load_crossreference(CROSSREFERENCE_PATH)
     # ESG Team data: Overrides & Portfolios
     overrides = load_overrides(OVR_PATH)
-    override_dict = override_dict(overrides)
+    # rename column brs_id to aladdin_id
+    overrides.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
+    ovr_dict = create_override_dict(overrides)
     # Load portfolios & benchmarks dicts
     (
         portfolio_dict,
@@ -321,9 +326,6 @@ def main():
     ) = load_portfolios(path_pb=BMK_PORTF_STR_PATH, path_committe=COMMITTEE_PATH)
 
     # PREP DATA FOR ANALYSIS
-    # rename column brs_id to aladdin_id
-    overrides.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
-    ovr_dict = override_dict(overrides)
     # add aladdin_id to df_1 and df_2
     logger.info("Adding aladdin_id to clarity dfs")
     df_1 = df_1.merge(crosreference[["permid", "aladdin_id"]], on="permid", how="left")
@@ -390,8 +392,9 @@ def main():
     delta_brs = delta_brs.merge(
         crosreference[["aladdin_id", "permid"]], on="aladdin_id", how="left"
     )
-    # drop isin from delta_clarity
+    # drop isin from deltas
     delta_clarity.drop(columns=["isin"], inplace=True)
+    delta_brs.drop(columns=["isin"], inplace=True)
     # add new column to delta_brs with ovr_dict value using aladdin_id
     delta_brs["ovr_list"] = delta_brs["aladdin_id"].map(ovr_dict)
     delta_clarity["ovr_list"] = delta_clarity["aladdin_id"].map(ovr_dict)
