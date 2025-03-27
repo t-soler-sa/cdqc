@@ -12,8 +12,7 @@ if str(parent_dir) not in sys.path:
 
 # Import the centralized configuration
 from config import get_config
-from utils.dataloaders import (load_aladdin_data, load_clarity_data,
-                               load_crossreference)
+from utils.dataloaders import load_aladdin_data, load_clarity_data, load_crossreference
 
 # Get the common configuration for the zombie-killer script.
 config = get_config("zombie-killer", interactive=False)
@@ -39,34 +38,27 @@ test_col = [
     "str_001_s",
     "str_002_ec",
     "str_003_ec",
+    "str_003b_ec",
     "str_004_asec",
     "str_005_ec",
-    "cs_001_sec",
-    "gp_esccp",
-    "cs_003_sec",
-    "cs_002_ec",
-    "str_006_sec",
-    "str_007_sect",
-    "gp_esccp_22",
-    "gp_esccp_25",
-    "gp_esccp_30",
     "art_8_basicos",
-    "str_003b_ec",
+    "str_006_sec",
+    "cs_001_sec",
+    "cs_002_ec",
 ]
 
 merging_cols = [
     "aladdin_id",
     "str_001_s",
     "str_002_ec",
-    "str_003b_ec",
     "str_003_ec",
+    "str_003b_ec",
     "str_004_asec",
     "str_005_ec",
     "str_006_sec",
-    "str_007_sect",
-    "gp_esccp_22",
-    "gp_esccp_25",
-    "gp_esccp_30",
+    "str_sfdr8_aec",
+    "scs_001_sec",
+    "scs_002_ec",
 ]
 
 columns_to_read = ["permid", "isin", "issuer_name"] + test_col
@@ -118,20 +110,10 @@ def column_sorter(df):
         "str_005_ec_df",
         "str_006_sec_brs",
         "str_006_sec_df",
-        "str_007_sect_brs",
-        "str_007_sect_df",
-        "str_008_sec",
-        "str_009_tec",
-        "gp_esccp_22_brs",
-        "gp_esccp_22_df",
-        "gp_esccp_25_brs",
-        "gp_esccp_25_df",
-        "gp_esccp_30_brs",
-        "gp_esccp_30_df",
-        "gp_essccp",
+        "str_sfdr8_aec_brs",
+        "str_sfdr8_aec_df",
         "scs_001_sec",
         "scs_002_ec",
-        "scs_003_sec",
         # zombie
         "zombie_flag",
         "zombie_list",
