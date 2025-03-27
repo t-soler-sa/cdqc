@@ -55,6 +55,7 @@ def load_excel(
     Parameters:
         file_path (Path): Path to the Excel file.
         sheet_name (str): Name of the sheet to read.
+        clean_n_convert (bool): If True, clean and convert the DataFrame.
 
     Returns:
         pd.DataFrame: DataFrame containing the data from the sheet.
@@ -69,6 +70,39 @@ def load_excel(
         logger.exception(
             "Failed to read Excel file: %s, sheet: %s", file_path, sheet_name
         )
+        raise
+    if clean_n_convert:
+        try:
+            logger.info("Succesfully loaded a clean and converted the DataFrame.")
+            return clean_and_convert(df)
+        except Exception:
+            logger.exception("Failed to clean and convert the DataFrame.")
+            raise
+    else:
+        logger.info("Succesfully loaded the DataFrame.")
+        return df
+
+
+def load_csv(
+    file_path: Path, clean_n_convert: bool = True, low_memory: bool = False
+) -> pd.DataFrame:
+    """
+    Read the specified sheet from an csv file into a DataFrame.
+
+    Parameters:
+        file_path (Path): Path to the csv file.
+        clean_n_convert (bool): If True, clean and convert the DataFrame.
+        low_memory (bool): If True, use low memory mode when reading the csv file.
+
+    Returns:
+        pd.DataFrame: DataFrame containing the data from the sheet.
+    """
+    logger.info("Attempting to read csv file: %s", file_path)
+    try:
+        df = pd.read_csv(file_path, low_memory=low_memory)
+        logger.info("Successfully read csv file: %s", file_path)
+    except Exception:
+        logger.exception("Failed to read csv file: %s", file_path)
         raise
     if clean_n_convert:
         try:
