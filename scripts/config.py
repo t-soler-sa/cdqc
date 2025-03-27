@@ -10,7 +10,9 @@ from utils.set_up_log import set_up_log
 from utils.get_output_dir import get_output_dir
 
 
-def get_config(script_name: str = "default", interactive: bool = True) -> dict:
+def get_config(
+    script_name: str = "default", interactive: bool = True, gen_output_dir: bool = True
+) -> dict:
     """
     Set up and return common configuration settings.
 
@@ -21,7 +23,7 @@ def get_config(script_name: str = "default", interactive: bool = True) -> dict:
         script_name (str): The name of the script.
         interactive (bool): Whether to allow interactive prompts for OUTPUT_DIR.
                             Defaults to True.
-
+        gen_output_dir (bool): Whether to generate the output directory.
     Returns:
         dict: A configuration dictionary with various constants and paths.
     """
@@ -44,6 +46,11 @@ def get_config(script_name: str = "default", interactive: bool = True) -> dict:
 
     # Define paths that are common for many scripts
     paths = {
+        "RAW_DF_WOUT_OVR_PATH": DATAFEED_DIR
+        / "raw_dataset"
+        / f"{YEAR}"
+        / f"{DATE}01_Production"
+        / f"{DATE}01_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv",
         "PRE_DF_WOVR_PATH": DATAFEED_DIR
         / "datafeeds_with_ovr"
         / f"{DATE_PREV}_df_issuer_level_with_ovr.csv",
@@ -51,6 +58,7 @@ def get_config(script_name: str = "default", interactive: bool = True) -> dict:
         / "ficheros_tratados"
         / f"{YEAR}"
         / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv",
+        "PROCESSED_DFS_WOUTOVR_PATH": DATAFEED_DIR / "ficheros_tratados" / f"{YEAR}",
         "CROSSREFERENCE_PATH": REPO_DIR
         / "excel_books"
         / "aladdin_data"
@@ -69,8 +77,11 @@ def get_config(script_name: str = "default", interactive: bool = True) -> dict:
         / "portfolio_lists.xlsx",
     }
 
-    # Determine OUTPUT_DIR based on the script name, passing the interactive flag.
-    OUTPUT_DIR = get_output_dir(script_name, SRI_DATA_DIR, interactive=interactive)
+    if gen_output_dir:
+        # Determine OUTPUT_DIR based on the script name, passing the interactive flag.
+        OUTPUT_DIR = get_output_dir(script_name, SRI_DATA_DIR, interactive=interactive)
+    else:
+        OUTPUT_DIR = None
 
     # Build and return the configuration dictionary
     config = {
