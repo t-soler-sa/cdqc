@@ -228,6 +228,30 @@ def load_overrides(file_path: Path) -> pd.DataFrame:
     return df
 
 
+def filter_strategy_entries(data: dict, key_name: str = "strategy_name") -> dict:
+    logger.info("Filtering strategy entries")
+    """
+    Filters a dictionary of entries to only include those entries 
+    where the value corresponding to key_name is non-empty.
+    
+    Parameters:
+        data (dict): A dictionary where each key maps to another dictionary 
+                     containing at least the keys 'aladdin_id' and key_name.
+        key_name (str): The key to check for a non-empty value. Defaults to 'strategy_name'.
+    
+    Returns:
+        dict: A new dictionary with entries that have non-empty values for key_name.
+    """
+    filtered_data = {}
+    for entry_key, entry_value in data.items():
+        # Check if the entry has the key_name and that its value is non-empty.
+        if key_name in entry_value and entry_value[key_name]:
+            filtered_data[entry_key] = entry_value
+
+    logger.info("Dictonary cleaned of empty strategies")
+    return filtered_data
+
+
 def load_portfolios(
     path_pb: Path,
     path_committe: Path,
@@ -394,7 +418,9 @@ def load_portfolios(
         }
 
     # 9. Return the two dictionaries
-    return portfolio_dict, benchmark_dict
+    return filter_strategy_entries(portfolio_dict), filter_strategy_entries(
+        benchmark_dict
+    )
 
 
 # define a function to save results in an Excel file
