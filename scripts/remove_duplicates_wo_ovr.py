@@ -1,69 +1,45 @@
-import logging
+# remove_duplicates_wo_ovr.py
+
 import time
 from pathlib import Path
 
 import pandas
+from config import get_config
+from utils.dataloaders import load_csv
 
 
-# Set up logging info
-def setup_logging():
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
+# Get configuration settings
+config = get_config(script_name="remove_duplicates_without_ovr", gen_output_dir=False)
+logger = config["logger"]
 
-
-setup_logging()
 # Add timer to the function
 start_time = time.time()
-logging.info("Script started")
+logger.info("Script started")
 
 # Define Date
-DATE = input("Insert data in the formar YYYYMM, please: ")
-# Get year from DATE
-YEAR = DATE[:4]
+DATE = config["DATE"]
+YEAR = config["YEAR"]
 
 # define BASE_DIRECTORY
-BASE_DIRECTORY = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED")
+# Define paths from configuration
+INPUT_PATH = config["paths"]["RAW_DF_WOUT_OVR_PATH"]
+OUTPUT_DIR = config["paths"]["PROCESSED_DFS_WOUTOVR_PATH"]
+OUTPUT_PATH = OUTPUT_DIR / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
 
-# Define INPUT_PATH
-INPUT_PATH = (
-    BASE_DIRECTORY
-    / "raw_dataset"
-    / f"{YEAR}"
-    / f"{DATE}01_Production"
-    / f"{DATE}01_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv"
-)
-
-# Define OUTPUT_PATH
-OUTPUT_PATH = (
-    BASE_DIRECTORY
-    / "ficheros_tratados"
-    / f"{YEAR}"
-    / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR"
-)  # naming 20240901_Equities_feed_IssuerLevel_sinOVR
-
-logging.info("Loading raw dataset")
+logger.info("Loading raw dataset")
 # read csv INPUT_PATH
-df = pandas.read_csv(INPUT_PATH, low_memory=False)
+df = load_csv(INPUT_PATH)
 
-# Lower column names
-df.columns = df.columns.str.lower()
-
-logging.info("Removing duplicates by permId")
+logger.info("Removing duplicates by permId")
 # remove duplicate by subset "issuer_name"
-df_2 = df.drop_duplicates(subset=["permid"])
+df_2 = df.drop_duplicates(subset=["permid"]).copy()
 
 # Save to OUTPUT_PATH as csv file
-logging.info("Saving dataset at issuer level on a csv file")
-csv_output_path = OUTPUT_PATH.with_suffix(".csv")
-df_2.to_csv(csv_output_path, index=False)
-logging.info(f"Saved to {csv_output_path}")
-
-# logging.info("Saving dataset at issuer level on an Excel file")
-## Save to OUTPUT_PATH as excel file
-# df_2.to_excel(OUTPUT_PATH, index=False)
+logger.info("Saving dataset at issuer level on a csv file")
+df_2.to_csv(OUTPUT_PATH, index=False)
+logger.info(f"Saved to {OUTPUT_PATH}")
 
 end_time = time.time()
-logging.info(f"Script completed in {end_time - start_time:.2f} seconds")
+logger.info(f"Script completed in {end_time - start_time:.2f} seconds")
 # display rows before and after
-logging.info(f"FINAL OUTPUT:\nRows before: {df.shape[0]} \nRows after: {df_2.shape[0]}")
+logger.info(f"FINAL OUTPUT:\nRows before: {df.shape[0]} \nRows after: {df_2.shape[0]}")
