@@ -561,7 +561,7 @@ def main():
         str_dfs_dict[strategy] = pd.DataFrame(rows)
 
     # Prepare lookups for efficient mapping
-    permid_to_df1 = df_1
+    permid_to_df1 = df_1  # df_1 already has permid as index
     aladdin_to_brs = brs_carteras_issuerlevel.set_index("aladdin_id")
 
     for strategy_name, df in str_dfs_dict.items():
