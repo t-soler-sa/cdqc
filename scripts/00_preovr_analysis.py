@@ -279,9 +279,13 @@ def create_override_dict(
     return ovr_dict
 
 
-def add_portfolio_info_to_df(portfolio_dict, delta_df):
-    # Build a reverse lookup dictionary: aladdin_id -> [portfolio_id, strategy_name]
-    aladdin_to_info = {}
+def add_portfolio_benchmark_info_to_df(
+    portfolio_dict, delta_df, column_name="affected_portfolio_str"
+):
+
+    # Initialize a defaultdict to accumulate (portfolio_id, strategy_name) pairs
+    aladdin_to_info = defaultdict(list)
+
     for portfolio_id, data in portfolio_dict.items():
         strategy = data.get("strategy_name")
         for a_id in data.get("aladdin_id", []):
