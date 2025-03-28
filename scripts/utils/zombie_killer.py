@@ -63,6 +63,12 @@ merging_cols = [
 
 columns_to_read = ["permid", "isin", "issuer_name"] + test_col
 
+rename_dict = {
+    "cs_001_sec": "scs_001_sec",
+    "cs_002_ec": "scs_002_ec",
+    "art_8_basicos": "str_sfdr8_aec",
+}
+
 
 # Define functions
 def mark_zombies(df, merging_cols):
@@ -112,8 +118,10 @@ def column_sorter(df):
         "str_006_sec_df",
         "str_sfdr8_aec_brs",
         "str_sfdr8_aec_df",
-        "scs_001_sec",
-        "scs_002_ec",
+        "scs_001_sec_brs",
+        "scs_001_sec_df",
+        "scs_002_ec_brs",
+        "scs_002_ec_df",
         # zombie
         "zombie_flag",
         "zombie_list",
@@ -188,6 +196,7 @@ def group_by_security_description(df):
 def main():
     # 00 LOAD DATA
     clarity_df = load_clarity_data(clarity_df_path, columns_to_read)
+    clarity_df.rename(columns=rename_dict, inplace=True)
     brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
     brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
     crosreference = load_crossreference(CROSSREFERENCE_PATH)
@@ -207,6 +216,9 @@ def main():
         how="left",
         suffixes=("_brs", "_df"),
     )
+
+    # now the same for benchmarks
+    brs_bench = brs_benchmarks[~(brs_benchmarks.aladdin_id.isna())].copy()
 
     # find zombies
     zombie_df = mark_zombies(merged_df, merging_cols)
