@@ -1,5 +1,6 @@
 # Git Ignore files #
 
+# Ignore the venv directory
 .venv
 
 # Ignore the excel books direcotry
