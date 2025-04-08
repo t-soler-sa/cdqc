@@ -3,7 +3,7 @@
     "str_001_s": {
       "description": "STR_001_S: SOFT strategy",
       "metrics_affecting": [
-        254, 368, 479, 356, 365, 428, 476, 473, 362, 461, 460, 497, 498
+        254, 334, 358, 364, 367, 370, 430, 460, 463, 475, 478, 481
       ],
       "outcome": {
         "excluded": {
@@ -105,8 +105,8 @@
     "str_002_ec": {
       "description": "STR_002_EC: Santander Responsabilidad Solidario",
       "metrics_affecting": [
-        288, 300, 314, 324, 334, 335, 346, 349, 356, 361, 364, 365, 368, 383,
-        391, 403, 406, 428, 448, 457, 460, 461, 476, 479, 497, 498
+        288, 300, 314, 324, 337, 346, 349, 358, 361, 364, 367, 370, 385, 391,
+        403, 406, 430, 448, 457, 460, 463, 478, 481
       ],
       "outcome": {
         "excluded": {
@@ -299,7 +299,7 @@
     },
     "str_003_ec": {
       "description": "STR_003_EC: Santander Empleados",
-      "metrics_affecting": [334, 356, 361, 364, 368, 428, 476, 479, 497, 498],
+      "metrics_affecting": [358, 361, 364, 370, 430, 478, 481],
       "outcome": {
         "excluded": {
           "maxexp_antip_landmines_part": {
@@ -379,7 +379,7 @@
     "str_003b_ec": {
       "description": "STR_003B_EC: Carteras Institucionales",
       "metrics_affecting": [
-        288, 300, 314, 324, 334, 356, 361, 364, 368, 428, 476, 479, 498
+        288, 300, 314, 324, 358, 361, 364, 370, 430, 478, 481
       ],
       "outcome": {
         "excluded": {
@@ -495,8 +495,8 @@
     "str_004_asec": {
       "description": "STR_004_ASEC: CORE Strategy",
       "metrics_affecting": [
-        254, 334, 356, 364, 365, 368, 373, 379, 392, 395, 428, 460, 461, 473,
-        476, 479, 484, 497, 498
+        254, 358, 364, 367, 370, 373, 379, 394, 397, 430, 460, 463, 475, 478,
+        481, 484
       ],
       "outcome": {
         "excluded": {
@@ -628,8 +628,8 @@
     "str_005_ec": {
       "description": "STR_005_EC Inveractivo Confianza",
       "metrics_affecting": [
-        288, 300, 314, 324, 335, 346, 349, 356, 361, 364, 365, 368, 385, 389,
-        403, 406, 428, 448, 457, 460, 463, 476, 479, 497, 498
+        288, 300, 314, 324, 337, 346, 349, 358, 361, 364, 367, 370, 385, 391,
+        403, 406, 430, 448, 457, 460, 463, 478, 481
       ],
       "outcome": {
         "excluded": {
@@ -817,7 +817,7 @@
     "str_006_sec": {
       "description": "STR_006_SEC: LATAM Investment Grade",
       "metrics_affecting": [
-        254, 334, 356, 364, 365, 368, 428, 460, 463, 473, 476, 479, 497
+        254, 358, 364, 367, 370, 430, 460, 463, 475, 478, 481
       ],
       "outcome": {
         "excluded": {
@@ -912,7 +912,7 @@
     },
     "art_8_basicos": {
       "description": "STR_SFDR8_AEC: SFDR Art 8 Basic",
-      "metrics_affecting": [334, 497, 498],
+      "metrics_affecting": [],
       "outcome": {
         "excluded": {
           "any_critical_controversy": {
@@ -947,7 +947,7 @@
     },
     "gp_esccp": {
       "description": "GP_ESCCP: Enviromental, Society Risk Group Polilcy",
-      "metrics_affecting": [382, 433, 436, 451, 454, 466, 484, 497, 498],
+      "metrics_affecting": [382, 484],
       "outcome": {
         "excluded": {
           "maxexp_thermal_coal_prod": {
@@ -987,7 +987,7 @@
     },
     "gp_esccp_22": {
       "description": "GP_ESCCP_22: Enviromental, Society Risk Group Polilcy Year 2022",
-      "metrics_affecting": [382, 433, 436, 451, 454, 466, 484, 497, 498],
+      "metrics_affecting": [382, 484],
       "outcome": {
         "excluded": {
           "maxexp_thermal_coal_prod": {
@@ -1027,7 +1027,7 @@
     },
     "gp_esccp_25": {
       "description": "GP_ESCCP_25: Enviromental, Society Risk Group Polilcy Year 2025",
-      "metrics_affecting": [382, 433, 436, 451, 454, 466, 484, 497, 498],
+      "metrics_affecting": [382, 484],
       "outcome": {
         "excluded": {
           "maxexp_thermal_coal_prod": {
@@ -1067,7 +1067,7 @@
     },
     "gp_esccp_30": {
       "description": "GP_ESCCP_30: Enviromental, Society Risk Group Polilcy Year 2030",
-      "metrics_affecting": [382, 433, 436, 451, 454, 466, 484, 497, 498],
+      "metrics_affecting": [382, 484],
       "outcome": {
         "excluded": {
           "maxexp_thermal_coal_prod": {
@@ -1109,7 +1109,7 @@
       "description": "CS_001_SEC: Cruz Roja",
       "metrics_affecting": [
         254, 270, 288, 300, 314, 322, 324, 358, 361, 364, 367, 370, 430, 433,
-        436, 451, 454, 460, 461, 466, 472, 475, 476, 479
+        436, 451, 454, 460, 463, 466, 472, 475, 478, 481
       ],
       "outcome": {
         "excluded": {
@@ -1301,8 +1301,8 @@
       "description": "CS_002_EC: PSA | Stelantis",
       "metrics_affecting": [
         276, 278, 288, 290, 300, 302, 314, 316, 324, 326, 358, 361, 364, 367,
-        370, 373, 376, 379, 382, 406, 430, 436, 439, 448, 454, 460, 461, 466,
-        472, 475, 476, 479
+        370, 373, 376, 379, 382, 406, 430, 436, 439, 448, 454, 460, 463, 466,
+        472, 475, 478, 481
       ],
       "outcome": {
         "excluded": {
