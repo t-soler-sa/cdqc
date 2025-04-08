@@ -7,102 +7,88 @@
       ],
       "outcome": {
         "excluded": {
-          "exp_antip_landmines_part": {
-            "metric_sk": 356,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_antip_landmines_part": {
+            "metric_id": 358,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_part": {
-            "metric_sk": 368,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_part": {
+            "metric_id": 370,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_prod": {
-            "metric_sk": 479,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_prod": {
+            "metric_id": 481,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_chemic_biolog_weapons_part": {
-            "metric_sk": 365,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_chemic_biolog_weapons_part": {
+            "metric_id": 367,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_part": {
-            "metric_sk": 428,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_part": {
+            "metric_id": 430,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_prod": {
-            "metric_sk": 476,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_prod": {
+            "metric_id": 478,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_white_phosporus_part": {
-            "metric_sk": 473,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_white_phosporus_part": {
+            "metric_id": 475,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_armament_prod": {
-            "metric_sk": 364,
+            "metric_id": 364,
             "type": "float64",
             "condition": ">",
-            "threshold": 25,
-            "result": "EXCLUDED"
+            "threshold": 25
           },
-          "exp_tobacco_prod": {
-            "metric_sk": 461,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_tobacco_prod": {
+            "metric_id": 463,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_tobacco_part": {
-            "metric_sk": 460,
+            "metric_id": 460,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
           "any_critical_controversy": {
-            "metric_sk": 334,
+            "metric_id": 334,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "sustainability_rating": {
-            "metric_sk": 254,
+            "metric_id": 254,
             "type": "string",
-            "condition": ["Poor", "Limited"],
-            "result": "EXCLUDED"
+            "condition": ["Poor", "Limited"]
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {
@@ -111,8 +97,7 @@
             "filter_type": "metric_category",
             "filter_value": "Controversy Metrics",
             "condition": "any(filter_value) = threshold",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
@@ -126,215 +111,188 @@
       "outcome": {
         "excluded": {
           "maxexp_alchol_prod": {
-            "metric_sk": 349,
+            "metric_id": 349,
             "type": "float64",
             "condition": ">",
-            "threshold": 10,
-            "result": "EXCLUDED"
+            "threshold": 10
           },
           "maxexp_alcohol_part": {
-            "metric_sk": 346,
+            "metric_id": 346,
             "type": "float64",
             "condition": ">",
-            "threshold": 10,
-            "result": "EXCLUDED"
+            "threshold": 10
           },
-          "exp_abortifacents_part": {
-            "metric_sk": 335,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_abortifacents_part": {
+            "metric_id": 337,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_contraceptives_part": {
-            "type": "bool",
-            "metric_sk": 383,
-            "condition": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_contraceptives_part": {
+            "metric_id": 385,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_embryonic_stem_cell_research_part": {
-            "metric_sk": 391,
+            "metric_id": 391,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_stem_cell_research": {
-            "metric_sk": 457,
+            "metric_id": 457,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_pornography_part": {
-            "metric_sk": 448,
+            "metric_id": 448,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_gambling_prod": {
-            "metric_sk": 406,
+            "metric_id": 406,
             "type": "float64",
             "condition": ">",
-            "threshold": 10,
-            "result": "EXCLUDED"
+            "threshold": 10
           },
           "maxexp_gambling_part": {
-            "metric_sk": 403,
+            "metric_id": 403,
             "type": "float64",
             "condition": ">",
-            "threshold": 10,
-            "result": "EXCLUDED"
+            "threshold": 10
           },
-          "exp_antip_landmines_part": {
-            "metric_sk": 356,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_antip_landmines_part": {
+            "metric_id": 358,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_chemic_biolog_weapons_part": {
-            "metric_sk": 365,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_chemic_biolog_weapons_part": {
+            "metric_id": 367,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_part": {
-            "metric_sk": 368,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_part": {
+            "metric_id": 370,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_prod": {
-            "metric_sk": 479,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_prod": {
+            "metric_id": 481,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_part": {
-            "metric_sk": 428,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_part": {
+            "metric_id": 430,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_prod": {
-            "metric_sk": 476,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_prod": {
+            "metric_id": 478,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_armament_prod": {
-            "metric_sk": 364,
+            "metric_id": 364,
             "type": "float64",
             "condition": ">",
             "threshold": 5,
             "result": "OK"
           },
           "maxexp_armament_part": {
-            "metric_sk": 361,
+            "metric_id": 361,
             "type": "float64",
             "condition": ">",
             "threshold": 5,
             "result": "OK"
           },
-          "exp_tobacco_prod": {
-            "metric_sk": 461,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
-          },
-          "maxexp_tobacco_part": {
-            "metric_sk": 460,
+          "maxexp_tobacco_prod": {
+            "metric_id": 463,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": "0"
+          },
+          "maxexp_tobacco_part": {
+            "metric_id": 460,
+            "type": "float64",
+            "condition": ">",
+            "threshold": 5
           },
           "any_critical_controversy": {
             "metric_sk": 334,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
@@ -344,50 +302,45 @@
       "metrics_affecting": [334, 356, 361, 364, 368, 428, 476, 479, 497, 498],
       "outcome": {
         "excluded": {
-          "exp_antip_landmines_part": {
-            "metric_sk": 356,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_antip_landmines_part": {
+            "metric_id": 358,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_part": {
-            "metric_sk": 368,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_part": {
+            "metric_id": 370,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_prod": {
-            "metric_sk": 479,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_prod": {
+            "metric_id": 481,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_part": {
-            "metric_sk": 428,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_part": {
+            "metric_id": 430,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_prod": {
-            "metric_sk": 476,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_prod": {
+            "metric_id": 478,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_armament_prod": {
-            "metric_sk": 364,
+            "metric_id": 364,
             "type": "float64",
             "condition": ">",
             "threshold": 5,
             "result": "OK"
           },
           "maxexp_armament_part": {
-            "metric_sk": 361,
+            "metric_id": 361,
             "type": "float64",
             "condition": ">",
             "threshold": 5,
@@ -397,22 +350,19 @@
             "metric_sk": 334,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {
@@ -421,8 +371,7 @@
             "filter_type": "metric_category",
             "filter_value": "Controversy Metrics",
             "condition": "any(filter_value) = threshold",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
@@ -434,50 +383,45 @@
       ],
       "outcome": {
         "excluded": {
-          "exp_antip_landmines_part": {
-            "metric_sk": 356,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_antip_landmines_part": {
+            "metric_id": 358,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_part": {
-            "metric_sk": 368,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_part": {
+            "metric_id": 370,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_prod": {
-            "metric_sk": 479,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_prod": {
+            "metric_id": 481,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_part": {
-            "metric_sk": 428,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_part": {
+            "metric_id": 430,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_prod": {
-            "metric_sk": 476,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_prod": {
+            "metric_id": 478,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_armament_prod": {
-            "metric_sk": 364,
+            "metric_id": 364,
             "type": "float64",
             "condition": ">",
             "threshold": 5,
             "result": "OK"
           },
           "maxexp_armament_part": {
-            "metric_sk": 361,
+            "metric_id": 361,
             "type": "float64",
             "condition": ">",
             "threshold": 5,
@@ -487,73 +431,63 @@
             "metric_sk": 334,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
@@ -566,137 +500,118 @@
       ],
       "outcome": {
         "excluded": {
-          "exp_antip_landmines_part": {
-            "metric_sk": 356,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_antip_landmines_part": {
+            "metric_id": 358,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_part": {
-            "metric_sk": 368,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_part": {
+            "metric_id": 370,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_prod": {
-            "metric_sk": 479,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_prod": {
+            "metric_id": 481,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_chemic_biolog_weapons_part": {
-            "metric_sk": 365,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_chemic_biolog_weapons_part": {
+            "metric_id": 367,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_part": {
-            "metric_sk": 428,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_part": {
+            "metric_id": 430,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_prod": {
-            "metric_sk": 476,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_prod": {
+            "metric_id": 478,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_white_phosporus_part": {
-            "metric_sk": 473,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_white_phosporus_part": {
+            "metric_id": 475,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_armament_prod": {
-            "metric_sk": 364,
+            "metric_id": 364,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
-          "exp_tobacco_prod": {
-            "metric_sk": 461,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_tobacco_prod": {
+            "metric_id": 463,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_tobacco_part": {
-            "metric_sk": 460,
+            "metric_id": 460,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
-          "exp_thermal_coal_prod": {
-            "metric_sk": 484,
+          "maxexp_thermal_coal_prod": {
+            "metric_id": 484,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_coal_mining_part": {
-            "metric_sk": 373,
+            "metric_id": 373,
             "type": "float64",
             "condition": ">",
-            "threshold": 25,
-            "result": "EXCLUDED"
+            "threshold": 25
           },
           "maxexp_coal_power_gen_part": {
-            "metric_sk": 379,
+            "metric_id": 379,
             "type": "float64",
             "condition": ">",
-            "threshold": 25,
-            "result": "EXCLUDED"
+            "threshold": 25
           },
-          "exp_fossil_fuels_prod": {
-            "metric_sk": 395,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
-          },
-          "exp_fossil_fuels_part": {
-            "metric_sk": 392,
+          "maxexp_fossil_fuels_prod": {
+            "metric_id": 397,
             "type": "float64",
             "condition": ">",
-            "threshold": 50,
-            "result": "EXCLUDED"
+            "threshold": "0"
+          },
+          "maxexp_fossil_fuels_part": {
+            "metric_id": 394,
+            "type": "float64",
+            "condition": ">",
+            "threshold": 50
           },
           "any_critical_controversy": {
             "metric_sk": 334,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "sustainability_rating": {
-            "metric_sk": 254,
+            "metric_id": 254,
             "type": "string",
-            "condition": ["Sufficient", "Poor", "Limited"],
-            "result": "EXCLUDED"
+            "condition": ["Sufficient", "Poor", "Limited"]
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {
@@ -705,8 +620,7 @@
             "filter_type": "metric_category",
             "filter_value": "Controversy Metrics",
             "condition": "any(filter_value) = threshold",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
@@ -720,209 +634,182 @@
       "outcome": {
         "excluded": {
           "maxexp_alchol_prod": {
-            "metric_sk": 349,
+            "metric_id": 349,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_alcohol_part": {
-            "metric_sk": 346,
+            "metric_id": 346,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
-          "exp_abortifacents_part": {
-            "metric_sk": 335,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_abortifacents_part": {
+            "metric_id": 337,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_contraceptives_part": {
-            "metric_sk": 385,
+            "metric_id": 385,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
-          "exp_embryonic_stem_cell_research_part": {
-            "metric_sk": 389,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_embryonic_stem_cell_research_part": {
+            "metric_id": 391,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_stem_cell_research": {
-            "metric_sk": 457,
+            "metric_id": 457,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_pornography_part": {
-            "metric_sk": 448,
+            "metric_id": 448,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_gambling_prod": {
-            "metric_sk": 406,
+            "metric_id": 406,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_gambling_part": {
-            "metric_sk": 403,
+            "metric_id": 403,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
-          "exp_antip_landmines_part": {
-            "metric_sk": 356,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_antip_landmines_part": {
+            "metric_id": 358,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_chemic_biolog_weapons_part": {
-            "metric_sk": 365,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_chemic_biolog_weapons_part": {
+            "metric_id": 367,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_part": {
-            "metric_sk": 368,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_part": {
+            "metric_id": 370,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_prod": {
-            "metric_sk": 479,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_prod": {
+            "metric_id": 481,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_part": {
-            "metric_sk": 428,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_part": {
+            "metric_id": 430,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_prod": {
-            "metric_sk": 476,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_prod": {
+            "metric_id": 478,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_armament_prod": {
-            "metric_sk": 364,
+            "metric_id": 364,
             "type": "float64",
             "condition": ">",
             "threshold": 0,
             "result": "OK"
           },
           "maxexp_armament_part": {
-            "metric_sk": 361,
+            "metric_id": 361,
             "type": "float64",
             "condition": ">",
             "threshold": 5,
             "result": "OK"
           },
           "maxexp_tobacco_prod": {
-            "metric_sk": 463,
+            "metric_id": 463,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_tobacco_part": {
-            "metric_sk": 460,
+            "metric_id": 460,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
@@ -934,95 +821,82 @@
       ],
       "outcome": {
         "excluded": {
-          "exp_antip_landmines_part": {
-            "metric_sk": 356,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_antip_landmines_part": {
+            "metric_id": 358,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_part": {
-            "metric_sk": 368,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_part": {
+            "metric_id": 370,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_cluster_bombs_prod": {
-            "metric_sk": 479,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_prod": {
+            "metric_id": 481,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_chemic_biolog_weapons_part": {
-            "metric_sk": 365,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_chemic_biolog_weapons_part": {
+            "metric_id": 367,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_part": {
-            "metric_sk": 428,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_part": {
+            "metric_id": 430,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_nuclear_weapons_prod": {
-            "metric_sk": 476,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_prod": {
+            "metric_id": 478,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
-          "exp_white_phosporus_part": {
-            "metric_sk": 473,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_white_phosporus_part": {
+            "metric_id": 475,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_armament_prod": {
-            "metric_sk": 364,
+            "metric_id": 364,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_tobacco_prod": {
-            "metric_sk": 463,
+            "metric_id": 463,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
           "maxexp_tobacco_part": {
-            "metric_sk": 460,
+            "metric_id": 460,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
           "any_critical_controversy": {
             "metric_sk": 334,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "sustainability_rating": {
-            "metric_sk": 254,
+            "metric_id": 254,
             "type": "string",
-            "condition": ["Poor", "Limited", "Sufficient", "Average", "Good"],
-            "result": "EXCLUDED"
+            "condition": ["Poor", "Limited", "Sufficient", "Average", "Good"]
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {
@@ -1031,8 +905,7 @@
             "filter_type": "metric_category",
             "filter_value": "Controversy Metrics",
             "condition": "any(filter_value) = threshold",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
@@ -1046,22 +919,19 @@
             "metric_sk": 334,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {
@@ -1070,8 +940,7 @@
             "filter_type": "metric_category",
             "filter_value": "Controversy Metrics",
             "condition": "any(filter_value) = threshold",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
@@ -1081,41 +950,36 @@
       "metrics_affecting": [382, 433, 436, 451, 454, 466, 484, 497, 498],
       "outcome": {
         "excluded": {
-          "exp_thermal_coal_prod": {
-            "metric_sk": 484,
+          "maxexp_thermal_coal_prod": {
+            "metric_id": 484,
             "type": "float64",
             "condition": ">",
-            "threshold": 50,
-            "result": "EXCLUDED"
+            "threshold": 50
           },
           "maxexp_coal_power_gen_prod": {
-            "metric_sk": 382,
+            "metric_id": 382,
             "type": "float64",
             "condition": ">",
-            "threshold": 50,
-            "result": "EXCLUDED"
+            "threshold": 50
           },
           "unconventional_fossil_fuels_sum": {
             "metric_type": "Dynamic Rule; Sum",
-            "filter_type": "metric_sk",
+            "filter_type": "metric_id",
             "filter_value": [433, 436, 451, 454, 466],
             "condition": "sum(filter_value) > threshold",
-            "threshold": 30,
-            "result": "EXCLUDED"
+            "threshold": 30
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {}
@@ -1126,41 +990,36 @@
       "metrics_affecting": [382, 433, 436, 451, 454, 466, 484, 497, 498],
       "outcome": {
         "excluded": {
-          "exp_thermal_coal_prod": {
-            "metric_sk": 484,
+          "maxexp_thermal_coal_prod": {
+            "metric_id": 484,
             "type": "float64",
             "condition": ">",
-            "threshold": 25,
-            "result": "EXCLUDED"
+            "threshold": 25
           },
           "maxexp_coal_power_gen_prod": {
-            "metric_sk": 382,
+            "metric_id": 382,
             "type": "float64",
             "condition": ">",
-            "threshold": 25,
-            "result": "EXCLUDED"
+            "threshold": 25
           },
           "unconventional_fossil_fuels_sum": {
             "metric_type": "Dynamic Rule; Sum",
-            "filter_type": "metric_sk",
+            "filter_type": "metric_id",
             "filter_value": [433, 436, 451, 454, 466],
             "condition": "sum(filter_value) > threshold",
-            "threshold": 30,
-            "result": "EXCLUDED"
+            "threshold": 30
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {}
@@ -1171,41 +1030,36 @@
       "metrics_affecting": [382, 433, 436, 451, 454, 466, 484, 497, 498],
       "outcome": {
         "excluded": {
-          "exp_thermal_coal_prod": {
-            "metric_sk": 484,
+          "maxexp_thermal_coal_prod": {
+            "metric_id": 484,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
           "maxexp_coal_power_gen_prod": {
-            "metric_sk": 382,
+            "metric_id": 382,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
           "unconventional_fossil_fuels_sum": {
             "metric_type": "Dynamic Rule; Sum",
-            "filter_type": "metric_sk",
+            "filter_type": "metric_id",
             "filter_value": [433, 436, 451, 454, 466],
             "condition": "sum(filter_value) > threshold",
-            "threshold": 30,
-            "result": "EXCLUDED"
+            "threshold": 30
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {}
@@ -1216,41 +1070,36 @@
       "metrics_affecting": [382, 433, 436, 451, 454, 466, 484, 497, 498],
       "outcome": {
         "excluded": {
-          "exp_thermal_coal_prod": {
-            "metric_sk": 484,
+          "maxexp_thermal_coal_prod": {
+            "metric_id": 484,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_coal_power_gen_prod": {
-            "metric_sk": 382,
+            "metric_id": 382,
             "type": "float64",
             "condition": ">",
-            "threshold": 10,
-            "result": "EXCLUDED"
+            "threshold": 10
           },
           "unconventional_fossil_fuels_sum": {
             "metric_type": "Dynamic Rule; Sum",
-            "filter_type": "metric_sk",
+            "filter_type": "metric_id",
             "filter_value": [433, 436, 451, 454, 466],
             "condition": "sum(filter_value) > threshold",
-            "threshold": 30,
-            "result": "EXCLUDED"
+            "threshold": 30
           },
           "group_policy": {
             "metric_sk": 497,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           },
           "defense_policy": {
             "metric_sk": 498,
             "type": "bool",
             "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+            "threshold": "TRUE"
           }
         },
         "flag": {}
@@ -1265,215 +1114,185 @@
       "outcome": {
         "excluded": {
           "maxexp_antip_landmines_part": {
-            "metric_sk": 358,
+            "metric_id": 358,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_cluster_bombs_part": {
-            "metric_sk": 370,
+            "metric_id": 370,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
-          "exp_cluster_bombs_prod": {
-            "metric_sk": 479,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_prod": {
+            "metric_id": 481,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_chemic_biolog_weapons_part": {
-            "metric_sk": 367,
+            "metric_id": 367,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           " maxexp_nuclear_weapons_part": {
-            "metric_sk": 430,
+            "metric_id": 430,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
-          "exp_nuclear_weapons_prod": {
-            "metric_sk": 476,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_prod": {
+            "metric_id": 478,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_white_phosporus_part": {
-            "metric_sk": 475,
+            "metric_id": 475,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_armament_prod": {
-            "metric_sk": 364,
+            "metric_id": 364,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_armament_part": {
-            "metric_sk": 361,
+            "metric_id": 361,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_small_arms_part": {
-            "metric_sk": 472,
+            "metric_id": 472,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_oil_sands_part": {
-            "metric_sk": 433,
+            "metric_id": 433,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
           "maxexp_oil_sands_prod": {
-            "metric_sk": 436,
+            "metric_id": 436,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_shale_energy_prod": {
-            "metric_sk": 454,
+            "metric_id": 454,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_shale_energy_part": {
-            "metric_sk": 451,
+            "metric_id": 451,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
           "maxexp_artic_oil_part": {
-            "metric_sk": 466,
+            "metric_id": 466,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
-          "exp_tobacco_prod": {
-            "metric_sk": 461,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_tobacco_prod": {
+            "metric_id": 463,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_tobacco_part": {
-            "metric_sk": 460,
+            "metric_id": 460,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "controv_business_ethics": {
-            "metric_sk": 270,
+            "metric_id": 270,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_social_impact_of_products": {
-            "metric_sk": 322,
+            "metric_id": 322,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "sustainability_rating": {
-            "metric_sk": 254,
+            "metric_id": 254,
             "type": "string",
-            "condition": ["Poor", "Limited", "Sufficient"],
-            "result": "EXCLUDED"
+            "condition": ["Poor", "Limited", "Sufficient"]
           }
         },
         "flag": {
           "controv_business_ethics": {
-            "metric_sk": 270,
+            "metric_id": 270,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_social_impact_of_products": {
-            "metric_sk": 322,
+            "metric_id": 322,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
@@ -1488,380 +1307,258 @@
       "outcome": {
         "excluded": {
           "maxexp_antip_landmines_part": {
-            "metric_sk": 358,
+            "metric_id": 358,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_cluster_bombs_part": {
-            "metric_sk": 370,
+            "metric_id": 370,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
-          "exp_cluster_bombs_prod": {
-            "metric_sk": 479,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_cluster_bombs_prod": {
+            "metric_id": 481,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_chemic_biolog_weapons_part": {
-            "metric_sk": 367,
+            "metric_id": 367,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           " maxexp_nuclear_weapons_part": {
-            "metric_sk": 430,
+            "metric_id": 430,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
-          "exp_nuclear_weapons_prod": {
-            "metric_sk": 476,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_nuclear_weapons_prod": {
+            "metric_id": 478,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_white_phosporus_part": {
-            "metric_sk": 475,
+            "metric_id": 475,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_armament_prod": {
-            "metric_sk": 364,
+            "metric_id": 364,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_armament_part": {
-            "metric_sk": 361,
+            "metric_id": 361,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_small_arms_part": {
-            "metric_sk": 472,
+            "metric_id": 472,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
-          "exp_tobacco_prod": {
-            "metric_sk": 461,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
+          "maxexp_tobacco_prod": {
+            "metric_id": 463,
+            "type": "float64",
+            "condition": ">",
+            "threshold": "0"
           },
           "maxexp_tobacco_part": {
-            "metric_sk": 460,
+            "metric_id": 460,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
           "maxexp_pornography_part": {
-            "metric_sk": 448,
+            "metric_id": 448,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_gambling_prod": {
-            "metric_sk": 406,
+            "metric_id": 406,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_coal_mining_prod": {
-            "metric_sk": 376,
+            "metric_id": 376,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_coal_mining_part": {
-            "metric_sk": 373,
+            "metric_id": 373,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_coal_power_gen_part": {
-            "metric_sk": 379,
+            "metric_id": 379,
             "type": "float64",
             "condition": ">",
-            "threshold": 25,
-            "result": "EXCLUDED"
+            "threshold": 25
           },
           "maxexp_coal_power_gen_prod": {
-            "metric_sk": 382,
+            "metric_id": 382,
             "type": "float64",
             "condition": ">",
-            "threshold": 5,
-            "result": "EXCLUDED"
+            "threshold": 5
           },
           "maxexp_oil_sands_prod": {
-            "metric_sk": 436,
+            "metric_id": 436,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_shale_energy_prod": {
-            "metric_sk": 454,
+            "metric_id": 454,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_artic_oil_part": {
-            "metric_sk": 466,
+            "metric_id": 466,
             "type": "float64",
             "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
+            "threshold": 0
           },
           "maxexp_palm_oil_part": {
-            "metric_sk": 439,
+            "metric_id": 439,
             "type": "float64",
             "condition": ">",
-            "threshold": 15,
-            "result": "EXCLUDED"
+            "threshold": 15
           },
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_employees_human_rights_sc": {
-            "metric_sk": 290,
+            "metric_id": 290,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_society_human_rights_sc": {
-            "metric_sk": 326,
+            "metric_id": 326,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_labour_relations_sc": {
-            "metric_sk": 302,
+            "metric_id": 302,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_community_relations": {
-            "metric_sk": 276,
+            "metric_id": 276,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_community_relations_sc": {
-            "metric_sk": 278,
+            "metric_id": 278,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           },
           "controv_occupational_health_and_safety_sc": {
-            "metric_sk": 316,
+            "metric_id": 316,
             "type": "float64",
             "condition": ">",
-            "threshold": 1,
-            "result": "EXCLUDED"
+            "threshold": 1
           }
         },
         "flag": {
           "controv_employees_human_rights": {
-            "metric_sk": 288,
+            "metric_id": 288,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_employees_human_rights_sc": {
-            "metric_sk": 290,
+            "metric_id": 290,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_society_human_rights": {
-            "metric_sk": 324,
+            "metric_id": 324,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_society_human_rights_sc": {
-            "metric_sk": 326,
+            "metric_id": 326,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_labour_relations": {
-            "metric_sk": 300,
+            "metric_id": 300,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_labour_relations_sc": {
-            "metric_sk": 302,
+            "metric_id": 302,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_community_relations": {
-            "metric_sk": 276,
+            "metric_id": 276,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_community_relations_sc": {
-            "metric_sk": 278,
+            "metric_id": 278,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_occupational_health_and_safety": {
-            "metric_sk": 314,
+            "metric_id": 314,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           },
           "controv_occupational_health_and_safety_sc": {
-            "metric_sk": 316,
+            "metric_id": 316,
             "type": "float64",
             "condition": ">",
-            "threshold": 20,
-            "result": "FLAG"
-          }
-        }
-      }
-    },
-    "cs_003_sec": {
-      "description": "CS_003_SEC: Insurance Spain & Portugal",
-      "metrics_affecting": [254, 358, 367, 370, 430, 461, 475, 497, 498],
-      "outcome": {
-        "excluded": {
-          "maxexp_antip_landmines_part": {
-            "metric_sk": 358,
-            "type": "float64",
-            "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
-          },
-          "maxexp_cluster_bombs_part": {
-            "metric_sk": 370,
-            "type": "float64",
-            "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
-          },
-          "maxexp_chemic_biolog_weapons_part": {
-            "metric_sk": 367,
-            "type": "float64",
-            "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
-          },
-          " maxexp_nuclear_weapons_part": {
-            "metric_sk": 430,
-            "type": "float64",
-            "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
-          },
-          "maxexp_white_phosporus_part": {
-            "metric_sk": 475,
-            "type": "float64",
-            "condition": ">",
-            "threshold": 0,
-            "result": "EXCLUDED"
-          },
-          "tobacco_production": {
-            "metric_sk": 461,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
-          },
-          "sustainability_rating": {
-            "metric_sk": 254,
-            "type": "string",
-            "condition": ["Average", "Sufficient", "Poor", "Limited"],
-            "result": "EXCLUDED"
-          },
-          "group_policy": {
-            "metric_sk": 497,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
-          },
-          "defense_policy": {
-            "metric_sk": 498,
-            "type": "bool",
-            "condition": "=",
-            "threshold": "TRUE",
-            "result": "EXCLUDED"
-          }
-        },
-        "flag": {
-          "severe_controversy": {
-            "metric_type": "Dynamic Rule; Any",
-            "filter_type": "metric_category",
-            "filter_value": "Controversy Metrics",
-            "condition": "any(filter_value) = threshold",
-            "threshold": 20,
-            "result": "FLAG"
+            "threshold": 20
           }
         }
       }
