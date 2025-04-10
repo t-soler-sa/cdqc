@@ -210,7 +210,6 @@ def load_overrides(file_path: Path, target_cols: list[str] = None) -> pd.DataFra
     if target_cols is None:
         # Default columns to load if not specified
         target_cols = ["clarityid", "permid", "brs_id", "ovr_target", "ovr_value"]
-    print(f"loading overrides columns {target_cols}")
     try:
         logger.info(f"Loading overrides from: {file_path}")
         df = pd.read_excel(
