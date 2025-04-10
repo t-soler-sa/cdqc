@@ -2,9 +2,7 @@
 
 import warnings
 
-import pandas as pd
-
-from utils.dataloaders import (
+from scripts.utils.dataloaders import (
     load_clarity_data,
     load_aladdin_data,
     load_crossreference,
@@ -12,8 +10,11 @@ from utils.dataloaders import (
     save_excel,
 )
 
+# Import the centralized configuration
+from scripts.utils.config import get_config
+
 # import relevant libraries from 00_preovr_analysis
-from _00_preovr_analysis import (
+from utils.clarity_data_quality_control_functions import (
     prepare_dataframes,
     compare_dataframes,
     check_new_exclusions,
@@ -26,10 +27,6 @@ from _00_preovr_analysis import (
     reorder_columns,
     clean_portfolio_and_exclusion_list,
 )
-
-
-# Import the centralized configuration
-from config import get_config
 
 
 # Get the common configuration for the Pre-OVR-Analysis script.
