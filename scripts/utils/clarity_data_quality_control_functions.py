@@ -1,0 +1,394 @@
+# clarity_data_quality_control_functions.py
+
+"""
+
+Module to define functions & constans to carry Clarity.ai's data quality control & analysis
+
+"""
+
+import logging
+from pathlib import Path
+from typing import List, Tuple
+from itertools import chain
+from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+
+# Module-level logger
+logger = logging.getLogger(__name__)
+
+# DEFINE CONSTANTS
+
+delta_test_cols = [
+    "str_001_s",
+    "str_002_ec",
+    "str_003_ec",
+    "str_003b_ec",
+    "str_004_asec",
+    "str_005_ec",
+    "str_006_sec",
+    "str_sfdr8_aec",
+    "scs_001_sec",
+    "scs_002_ec",
+]
+
+brs_test_cols = ["aladdin_id"] + delta_test_cols
+
+
+# DEFINE FUNCTIONS
+def prepare_dataframes(
+    base_df: pd.DataFrame, new_df: pd.DataFrame, target_index: str = "permid"
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Prepare DataFrames by setting the index and filtering for common indexes.
+    Logs info about common, new, and missing indexes.
+    """
+    # Set index to 'permid' if it exists, otherwise assume it's already the index.
+    logger.info(f"Setting index to {target_index}.")
+    if target_index in base_df.columns:
+        base_df = base_df.set_index(target_index)
+    else:
+        logger.warning("df1 does not contain a 'permid' column. Using current index.")
+
+    if target_index in new_df.columns:
+        new_df = new_df.set_index(target_index)
+    else:
+        logger.warning("df2 does not contain a 'permid' column. Using current index.")
+
+    common_indexes = base_df.index.intersection(new_df.index)
+    new_indexes = new_df.index.difference(base_df.index)
+    missing_indexes = base_df.index.difference(new_df.index)
+
+    logger.info(f"Number of common indexes: {len(common_indexes)}")
+
+    return (
+        base_df.loc[common_indexes],
+        new_df.loc[common_indexes],
+        new_df.loc[new_indexes],
+        base_df.loc[missing_indexes],
+    )
+
+
+def compare_dataframes(
+    df1: pd.DataFrame, df2: pd.DataFrame, test_col: List[str] = delta_test_cols
+) -> pd.DataFrame:
+    """Compare DataFrames and create a delta DataFrame."""
+    delta = df2.copy()
+    for col in test_col:
+        if col in df1.columns and col in df2.columns:
+            logger.info(f"Comparing column: {col}")
+            # Create a mask for differences between the two DataFrames
+            diff_mask = df1[col] != df2[col]
+            # Update the delta DataFrame with the differences
+            delta.loc[~diff_mask, col] = np.nan
+    return delta
+
+
+def get_exclusion_list(
+    row: pd.Series,
+    df1: pd.DataFrame,
+    test_col: List[str] = delta_test_cols,
+) -> List[str]:
+    """Get list of columns that changed to EXCLUDED."""
+    return [
+        col
+        for col in test_col
+        if row[col] == "EXCLUDED" and df1.loc[row.name, col] != "EXCLUDED"
+    ]
+
+
+def get_inclusion_list(
+    row: pd.Series,
+    df1: pd.DataFrame,
+    test_col: List[str] = delta_test_cols,
+) -> List[str]:
+    """Get list of columns that changed from EXCLUDED to any other value."""
+    return [
+        col
+        for col in test_col
+        if row[col] != "EXCLUDED" and df1.loc[row.name, col] == "EXCLUDED"
+    ]
+
+
+def check_new_exclusions(
+    df1: pd.DataFrame,
+    df2: pd.DataFrame,
+    delta: pd.DataFrame,
+    test_col: List[str] = delta_test_cols,
+    suffix_level: str = "",
+) -> pd.DataFrame:
+    """Check for new exclusions and update the delta DataFrame."""
+    delta["new_exclusion"] = False
+    for col in test_col:
+        if col in df1.columns and col in df2.columns:
+            logger.info(f"Checking for new exclusions in column: {col}")
+            mask = (df1[col] != "EXCLUDED") & (df2[col] == "EXCLUDED")
+            delta.loc[mask, "new_exclusion"] = True
+            logger.info(f"Number of new exclusions in {col}: {mask.sum()}")
+    delta[f"exclusion_list{suffix_level}"] = delta.apply(
+        lambda row: get_exclusion_list(row, df1, test_col), axis=1
+    )
+    return delta
+
+
+def check_new_inclusions(
+    df1: pd.DataFrame,
+    df2: pd.DataFrame,
+    delta: pd.DataFrame,
+    test_col: List[str] = delta_test_cols,
+    suffix_level: str = "",
+) -> pd.DataFrame:
+    """Check for new inclusions and update the delta DataFrame."""
+    delta["new_inclusion"] = False
+    for col in test_col:
+        if col in df1.columns and col in df2.columns:
+            logger.info(f"Checking for new inclusions in column: {col}")
+            mask = (df1[col] == "EXCLUDED") & (df2[col] != "EXCLUDED")
+            delta.loc[mask, "new_inclusion"] = True
+            logger.info(f"Number of new inclusions in {col}: {mask.sum()}")
+    delta[f"inclusion_list{suffix_level}"] = delta.apply(
+        lambda row: get_inclusion_list(row, df1, test_col), axis=1
+    )
+    return delta
+
+
+def finalize_delta(
+    delta: pd.DataFrame,
+    test_col: List[str] = delta_test_cols,
+    target_index: str = "permid",
+) -> pd.DataFrame:
+    """Finalize the delta DataFrame by removing unchanged rows and resetting the index."""
+    delta = delta.dropna(subset=test_col, how="all")
+    delta.reset_index(inplace=True)
+    delta[target_index] = delta[target_index].astype(str)
+    logger.info(f"Final delta shape: {delta.shape}")
+    return delta
+
+
+def create_override_dict(
+    df: pd.DataFrame = None,
+    id_col: str = "aladdin_id",
+    str_col: str = "ovr_target",
+    ovr_col: str = "ovr_value",
+):
+    """
+    Converts the overrides DataFrame to a dictionary.
+    Args:
+        df (pd.DataFrame): DataFrame containing the overrides.
+        id_col (str): Column name for the identifier.
+        str_col (str): Column name for the strategy.
+        ovr_col (str): Column name for the override value.
+    Returns:
+        dict: Dictionary of overrides.
+    """
+    # 1. Groupd the df by issuer_id
+    grouped = df.groupby(id_col)
+
+    # 2. Initialise the dictionary
+    ovr_dict = {}
+
+    # 3. Iterate over each group (issuer id and its corresponding rows)
+    for id, group_data in grouped:
+        # 3.1. for each issuer id create a dict pairing the strategy and the override value
+        ovr_result = dict(zip(group_data[str_col], group_data[ovr_col]))
+        # 3.2. add the dict to the main dict
+        ovr_dict[id] = ovr_result
+
+    return ovr_dict
+
+
+def add_portfolio_benchmark_info_to_df(
+    portfolio_dict, delta_df, column_name="affected_portfolio_str"
+):
+
+    # Initialize a defaultdict to accumulate (portfolio_id, strategy_name) pairs
+    aladdin_to_info = defaultdict(list)
+
+    for portfolio_id, data in portfolio_dict.items():
+        strategy = data.get("strategy_name")
+        for a_id in data.get("aladdin_id", []):
+            aladdin_to_info[a_id].append((portfolio_id, strategy))
+
+    # Map each aladdin_id in delta_df to a list of accumulated portfolio info
+    delta_df[column_name] = delta_df["aladdin_id"].apply(
+        lambda x: list(chain.from_iterable(aladdin_to_info.get(x, [])))
+    )
+
+    return delta_df
+
+
+def get_issuer_level_df(df: pd.DataFrame, idx_name: str) -> pd.DataFrame:
+    """
+    Removes duplicates based on idx_name, and drops rows where idx_name column contains
+    NaN, None, or strings like "nan", "NaN", "none", or empty strings.
+
+    Args:
+        df (pd.DataFrame): Input dataframe.
+        idx_name (str): Column name used for duplicate removal and NaN filtering.
+
+    Returns:
+        pd.DataFrame: Cleaned dataframe.
+    """
+    # Drop duplicates
+    df_cleaned = df.drop_duplicates(subset=[idx_name])
+
+    # Drop rows where idx_name is NaN/None or has invalid strings
+    valid_rows = df_cleaned[idx_name].notnull() & (
+        ~df_cleaned[idx_name]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .isin(["nan", "none", ""])
+    )
+
+    return df_cleaned[valid_rows]
+
+
+def filter_non_empty_lists(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    """
+    Returns a DataFrame filtered so that rows where the specified column contains
+    an empty list are removed. Keeps rows where the column has a list with at least one element.
+
+    Parameters:
+    - df (pd.DataFrame): The input DataFrame
+    - column (str): The name of the column to check
+
+    Returns:
+    - pd.DataFrame: Filtered DataFrame
+    """
+    return df[df[column].apply(lambda x: isinstance(x, list) and len(x) > 0)]
+
+
+def filter_rows_with_common_elements(df, col1, col2):
+    """
+    Return rows of df where the lists in col1 and col2 have at least one common element.
+
+    Parameters:
+        df (pd.DataFrame): The input DataFrame.
+        col1 (str): The name of the first column containing lists.
+        col2 (str): The name of the second column containing lists.
+
+    Returns:
+        pd.DataFrame: A DataFrame filtered to include only rows where col1 and col2 have a common element.
+    """
+    logger.info(f"Filtering rows with common elements in columns: {col1} and {col2}")
+    mask = df.apply(lambda row: bool(set(row[col1]).intersection(row[col2])), axis=1)
+    return df[mask].copy()
+
+
+def reorder_columns(df: pd.DataFrame, keep_first: list[str], exclude: list[str] = None):
+    if exclude is None:
+        exclude = set()
+    return df[
+        keep_first
+        + [col for col in df.columns if col not in keep_first and col not in exclude]
+    ]
+
+
+def remove_matching_rows(df):
+    # Identify columns with specific suffixes
+    cols_old = [col for col in df.columns if col.endswith("_old")]
+    cols_brs = [col for col in df.columns if col.endswith("_brs")]
+    cols_ovr = [col for col in df.columns if col.endswith("_ovr")]
+
+    # Assuming there's only one set of each column type based on your example
+    if len(cols_old) != 1 or len(cols_brs) != 1 or len(cols_ovr) != 1:
+        raise ValueError("Expected exactly one column each for '_old', '_brs', '_ovr'")
+
+    col_old, col_brs, col_ovr = cols_old[0], cols_brs[0], cols_ovr[0]
+
+    # Filter rows where all three column values match
+    df_filtered = df[
+        ~(df[col_old] == df[col_brs]) | ~(df[col_old] == df[col_ovr])
+    ].copy()
+
+    return df_filtered
+
+
+def clean_inclusion_list(df):
+    """
+    Processes each row of df:
+    1. For each element in 'inclusion_list_brs', if the element is a key in 'ovr_list' and
+       its value is 'EXCLUDED', remove the element.
+    2. Rows where 'inclusion_list_brs' is empty (or becomes empty after filtering) are dropped.
+    """
+
+    def process_row(row):
+        inc_list = row.get("inclusion_list_brs", [])
+        ovr_list = row.get("ovr_list", {})
+
+        # If inc_list is a NumPy array, convert it to a list.
+        if isinstance(inc_list, np.ndarray):
+            inc_list = inc_list.tolist()
+
+        # If inc_list is not a list (or array), then treat it as empty.
+        if not isinstance(inc_list, list):
+            return []
+
+        # For ovr_list: if it's not a dict, then treat it as an empty dict.
+        if not isinstance(ovr_list, dict):
+            ovr_list = {}
+
+        # Filter out items that are in ovr_list and marked as 'EXCLUDED'
+        return [
+            item
+            for item in inc_list
+            if item not in ovr_list or ovr_list[item] != "EXCLUDED"
+        ]
+
+    # Apply the row-wise processing.
+    df.loc[:, "inclusion_list_brs"] = df.apply(process_row, axis=1)
+
+    # Drop rows where 'inclusion_list_brs' is empty.
+    df = df[
+        df["inclusion_list_brs"].apply(lambda x: isinstance(x, list) and len(x) > 0)
+    ]
+
+    return df
+
+
+def pair_elements(input_list):
+    """
+    Pairs consecutive elements in a list into tuples.
+    Parameters: -> input_list : list
+    -----------
+    Returns: -> list_of_tuples : list. A list where consecutive elements are paired as tuples.
+    --------
+    Raises TypeError: If the input is not a list and ValueError: If the list does not have an even number of elements.
+    """
+    if not isinstance(input_list, list):
+        raise TypeError("Expected a list as input.")
+    if len(input_list) % 2 != 0:
+        raise ValueError("The list must have an even number of elements.")
+
+    return [(input_list[i], input_list[i + 1]) for i in range(0, len(input_list), 2)]
+
+
+def clean_portfolio_and_exclusion_list(row):
+    """
+    First pairs elements in 'affected_portfolio_str' and filters them based
+    on 'exclusion_list_brs'. Then cleans 'exclusion_list_brs' based on the
+    filtered results.
+    """
+    raw_list = row["affected_portfolio_str"]
+    exclusion_list = row["exclusion_list_brs"]
+
+    # Pair elements first
+    paired = pair_elements(raw_list)
+
+    # Filter tuples based on exclusion list
+    cleaned_paired = [tup for tup in paired if tup[1] in exclusion_list]
+
+    # Update affected_portfolio_str
+    row["affected_portfolio_str"] = cleaned_paired
+
+    # Extract strategies from the cleaned paired tuples
+    affected_strategies = {strategy for _, strategy in cleaned_paired}
+
+    # Update exclusion_list_brs
+    row["exclusion_list_brs"] = [
+        strategy for strategy in exclusion_list if strategy in affected_strategies
+    ]
+
+    return row
