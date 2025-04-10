@@ -4,9 +4,9 @@ from pathlib import Path
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-from get_date import get_date
-from set_up_log import set_up_log
-from get_output_dir import get_output_dir
+from utils.get_date import get_date
+from utils.set_up_log import set_up_log
+from utils.get_output_dir import get_output_dir
 
 
 def get_config(
@@ -38,7 +38,7 @@ def get_config(
 
     # Define common paths
     # REPO_DIR is derived relative to this script to get the repository's path.
-    REPO_DIR = Path(__file__).resolve().parent.parent
+    REPO_DIR = Path(__file__).resolve().parent.parent.parent
     # DATAFEED_DIR is taken from an enviroment variable (with a fallback if needed)
     DATAFEED_DIR = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED")
     SRI_DATA_DIR = REPO_DIR / "excel_books" / "sri_data"
