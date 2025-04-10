@@ -23,6 +23,7 @@ def get_output_dir(
         "00_preovr_analysis_str_level": "pre_ovr_analysis",
         "overrides": "overrides",
         "noncompliance": "noncompliance",
+        "noncomplieance-analysis": "noncompliance",
         "impact_analysis": "impact_analysis",
     }
 
