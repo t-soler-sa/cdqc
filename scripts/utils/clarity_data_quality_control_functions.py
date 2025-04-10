@@ -160,8 +160,10 @@ def finalize_delta(
 ) -> pd.DataFrame:
     """Finalize the delta DataFrame by removing unchanged rows and resetting the index."""
     delta = delta.dropna(subset=test_col, how="all")
+    # Make a copy to avoid SettingWithCopyWarning
+    delta = delta.copy()
     delta.reset_index(inplace=True)
-    delta[target_index] = delta[target_index].astype(str)
+    delta.loc[:, target_index] = delta[target_index].astype(str)
     logger.info(f"Final delta shape: {delta.shape}")
     return delta
 
