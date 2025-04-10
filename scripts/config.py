@@ -54,6 +54,10 @@ def get_config(
         "PRE_DF_WOVR_PATH": DATAFEED_DIR
         / "datafeeds_with_ovr"
         / f"{DATE_PREV}_df_issuer_level_with_ovr.csv",
+        "NEW_DF_WOVR_PATH": DATAFEED_DIR
+        / "datafeeds_with_ovr"
+        / f"{DATE}_df_issuer_level_with_ovr.csv",
+        "DF_WOVR_PATH_DIR": DATAFEED_DIR / "datafeeds_with_ovr",
         "CURRENT_DF_WOUTOVR_PATH": DATAFEED_DIR
         / "ficheros_tratados"
         / f"{YEAR}"
