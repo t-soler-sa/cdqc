@@ -2,9 +2,8 @@
 
 import time
 
-from pandas import drop_duplicates, to_csv
 from config import get_config
-from utils.dataloaders import load_csv
+from dataloaders import load_csv
 
 
 # Get configuration settings
