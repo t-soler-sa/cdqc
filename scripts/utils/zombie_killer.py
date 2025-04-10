@@ -11,7 +11,7 @@ if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
 
 # Import the centralized configuration
-from scripts.utils.config import get_config
+from utils.config import get_config
 from utils.dataloaders import load_aladdin_data, load_clarity_data, load_crossreference
 
 # Get the common configuration for the zombie-killer script.
