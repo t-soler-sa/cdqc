@@ -7,3 +7,6 @@ if [ -s unused.txt ]; then
 else
     echo "No unused packages found to uninstall."
 fi
+
+pip freeze > requirements_2.txt
+pip install --upgrade -r requirements_2.txt
