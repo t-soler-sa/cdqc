@@ -24,8 +24,7 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
 
 # Array of scripts to run
 SCRIPTS=(
-    "_00_preovr_analysis.py"
-    "_01_generate_ovr_list.py"
+    "_01_generate_ovr_lists.py"
     "_02_apply_ovr.py"
     "_03_noncompliance_analysis.py"
     "_04_impact_analysis.py"
