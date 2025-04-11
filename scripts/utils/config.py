@@ -38,7 +38,7 @@ def get_config(
 
     # Define common paths
     # REPO_DIR is derived relative to this script to get the repository's path.
-    REPO_DIR = Path(__file__).resolve().parent.parent.parent
+    REPO_DIR = Path(r"C:\Users\n740789\Documents\clarity_data_quality_controls")
     # DATAFEED_DIR is taken from an enviroment variable (with a fallback if needed)
     DATAFEED_DIR = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED")
     SRI_DATA_DIR = REPO_DIR / "excel_books" / "sri_data"
