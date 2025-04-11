@@ -367,14 +367,39 @@ def pair_elements(input_list):
     return [(input_list[i], input_list[i + 1]) for i in range(0, len(input_list), 2)]
 
 
-def clean_portfolio_and_exclusion_list(row):
+def clean_exclusion_list_with_ovr(df):
+    # Define helper function with safety check
+    def filter_exclusions(row):
+        ovr_dict = row["ovr_list"] if isinstance(row["ovr_list"], dict) else {}
+        return [
+            code
+            for code in row["exclusion_list_brs"]
+            if ovr_dict.get(code) not in {"OK", "FLAG"}
+        ]
+
+    # Apply filtering safely
+    df["exclusion_list_brs"] = df.apply(filter_exclusions, axis=1)
+
+    # Drop rows where exclusion_list_brs is empty after cleaning
+    df = df[
+        df["exclusion_list_brs"].apply(lambda x: isinstance(x, list) and len(x) > 0)
+    ]
+
+    return df
+
+
+def clean_portfolio_and_exclusion_list(
+    row,
+    affected_portfolio_name="affected_portfolio_str",
+    exclusion_list_name="exclusion_list_brs",
+):
     """
     First pairs elements in 'affected_portfolio_str' and filters them based
     on 'exclusion_list_brs'. Then cleans 'exclusion_list_brs' based on the
     filtered results.
     """
-    raw_list = row["affected_portfolio_str"]
-    exclusion_list = row["exclusion_list_brs"]
+    raw_list = row[affected_portfolio_name]
+    exclusion_list = row[exclusion_list_name]
 
     # Pair elements first
     paired = pair_elements(raw_list)
