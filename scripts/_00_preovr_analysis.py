@@ -11,6 +11,7 @@ The script will output an Excel file with the following sheets:
 
 """
 
+# IMPORT MODULS & LIBS
 import warnings
 from typing import List, Tuple
 from itertools import chain
@@ -42,8 +43,8 @@ from utils.clarity_data_quality_control_functions import (
     reorder_columns,
     remove_matching_rows,
     clean_inclusion_list,
-    pair_elements,
     clean_portfolio_and_exclusion_list,
+    clean_exclusion_list_with_ovr,
 )
 
 from utils.zombie_killer import main as zombie_killer
@@ -51,7 +52,7 @@ from utils.zombie_killer import main as zombie_killer
 # Import the centralized configuration
 from utils.config import get_config
 
-
+# CONFIG SCRIPT
 # Get the common configuration for the Pre-OVR-Analysis script.
 config = get_config("pre-ovr-analysis", interactive=False)
 logger = config["logger"]
@@ -62,7 +63,6 @@ REPO_DIR = config["REPO_DIR"]
 DATAFEED_DIR = config["DATAFEED_DIR"]
 SRI_DATA_DIR = config["SRI_DATA_DIR"]
 paths = config["paths"]
-
 # Use the paths from config
 df_1_path = paths["PRE_DF_WOVR_PATH"]
 df_2_path = paths["CURRENT_DF_WOUTOVR_PATH"]
@@ -70,16 +70,14 @@ CROSSREFERENCE_PATH = paths["CROSSREFERENCE_PATH"]
 BMK_PORTF_STR_PATH = paths["BMK_PORTF_STR_PATH"]
 OVR_PATH = paths["OVR_PATH"]
 COMMITTEE_PATH = paths["COMMITTEE_PATH"]
-
 # Define the output directory and file based on the configuration.
 OUTPUT_DIR = config["OUTPUT_DIR"]
 OUTPUT_FILE = OUTPUT_DIR / f"{DATE}_pre_ovr_analysis.xlsx"
-
 # Ignore workbook warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 
-# CONSTANTS
+# DEF CONSTANTS
 # let's define necessary column lists & dictionaries
 id_name_cols = ["permid", "isin", "issuer_name"]
 id_name_issuers_cols = ["aladdin_id", "permid", "issuer_name"]
@@ -107,7 +105,6 @@ delta_test_cols = [
     "scs_001_sec",
     "scs_002_ec",
 ]
-
 columns_to_read = id_name_cols + clarity_test_col
 rename_dict = {
     "cs_001_sec": "scs_001_sec",
@@ -116,11 +113,13 @@ rename_dict = {
 }
 
 
+# DEF MAIN
 def main():
     logger.info(f"Starting pre-ovr-analysis for {DATE}.")
     # 1.    LOAD DATA
 
     # 1.1.  aladdin /brs data / perimeters
+    logger.info("Loading BRS data")
     brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
     brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
     crosreference = load_crossreference(CROSSREFERENCE_PATH)
@@ -130,6 +129,7 @@ def main():
     brs_benchmarks_issuerlevel = get_issuer_level_df(brs_benchmarks, "aladdin_id")
 
     # 1.2.  clarity data
+    logger.info("Loading clarity data")
     df_1 = load_clarity_data(df_1_path, columns_to_read)
     df_2 = load_clarity_data(df_2_path, columns_to_read)
     # let's rename columns in df_1 and df_2 using the rename_dict
@@ -145,6 +145,7 @@ def main():
     )
 
     # 1.3.   ESG Team data: Overrides & Portfolios
+    logger.info("Loading SRI Team Data: Overrides, Portfolios & Benchmark SRI Strategy")
     overrides = load_overrides(OVR_PATH)
     # rename column brs_id to aladdin_id
     overrides.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
@@ -176,6 +177,7 @@ def main():
         )
 
     # 2.2.  PREPARE DATA CLARITY LEVEL
+    logger.info("Preparing dataframes for clarity level")
     (
         df_1,
         df_2,
@@ -198,6 +200,7 @@ def main():
     )
 
     # 2.3.  PREPARE DATA BRS LEVEL FOR PORTFOLIOS
+    logger.info("Preparing dataframes for BRS Portfolio level")
     (
         brs_df,
         clarity_df,
@@ -214,6 +217,7 @@ def main():
     )
 
     # 2.4.  PREPARE DATA BENCHMARK BRS LEVEL
+    logger.info("Preparing dataframes for BRS benchmarks level")
     (
         brs_df_benchmarks,
         clarity_df_benchmarks,
@@ -230,6 +234,7 @@ def main():
     )
 
     # START PRE-OVR ANALYSIS
+    logger.info("Starting pre-ovr-analysis")
     # COMPARE DATA
     logger.info("comparing clarity dataframes")
     delta_clarity = compare_dataframes(df_1, df_2)
@@ -297,6 +302,12 @@ def main():
     delta_benchmarks = filter_non_empty_lists(
         delta_benchmarks, "affected_portfolio_str"
     )
+
+    # ADD TEST FOR INCLUSIONS
+    logger.info("creating copy of dataset for inclusion analysis")
+    dlt_inc_brs = delta_brs.copy()
+    dlt_inc_benchmarks = delta_benchmarks.copy()
+
     # pass filter_rows_with_common_elements for columns exclusion_list_brs and affected_portfolio_str
     delta_brs = filter_rows_with_common_elements(
         delta_brs, "exclusion_list_brs", "affected_portfolio_str"
@@ -304,6 +315,35 @@ def main():
     delta_benchmarks = filter_rows_with_common_elements(
         delta_benchmarks, "exclusion_list_brs", "affected_portfolio_str"
     )
+    # let's use filter_non_empty_lists to remove rows with empty lists in affected_portfolio_str
+    delta_brs = filter_non_empty_lists(delta_brs, "affected_portfolio_str")
+    # let's use filter_non_empty_lists to remove rows with empty lists in affected_portfolio_str
+    delta_benchmarks = filter_non_empty_lists(
+        delta_benchmarks, "affected_portfolio_str"
+    )
+
+    # 5.1. FILTER & SORT DATA & GET RELEVANT DATA FOR INCLUSION ANALYSIS
+
+    # pass filter_rows_with_common_elements for columns exclusion_list_brs and affected_portfolio_str
+    delta_brs = filter_rows_with_common_elements(
+        delta_brs, "exclusion_list_brs", "affected_portfolio_str"
+    )
+    delta_benchmarks = filter_rows_with_common_elements(
+        delta_benchmarks, "exclusion_list_brs", "affected_portfolio_str"
+    )
+
+    # let's reset df1 index to permid
+    df_1.reset_index(inplace=True)
+    df_1["permid"] = df_1["permid"].astype(str)
+
+    # reoder columns for inclusions
+    dlt_inc_brs = reorder_columns(dlt_inc_brs, id_name_issuers_cols, delta_test_cols)
+    dlt_inc_benchmarks = reorder_columns(
+        dlt_inc_benchmarks, id_name_issuers_cols, delta_test_cols
+    )
+
+    dlt_inc_brs = clean_inclusion_list(dlt_inc_brs)
+    dlt_inc_benchmarks = clean_inclusion_list(dlt_inc_benchmarks)
 
     # 6. GET STRATEGIES DFS
     str_dfs_dict = {}
@@ -368,7 +408,7 @@ def main():
         df = df[cols]
         str_dfs_dict[strategy_name] = df
 
-    # 7. SAVE TO EXCEL
+    # 7. PREP BEFORE SAVING INTO EXCEL
 
     # 7.1. sort columns of deltas df before saving
     # set id_name_issuers_cols first and exclude delta_test_cols
@@ -387,12 +427,65 @@ def main():
         out_issuer_clarity, id_name_issuers_cols, id_name_cols
     )
 
+    # remove matchin rows from strategies dataframes
+    for df_name, df in str_dfs_dict.items():
+        str_dfs_dict[df_name] = remove_matching_rows(df)
+
+    # columns to remove from delta_brs, delta_benchmarks before saving
+    exclusion_cols_to_remove = ["new_inclusion", "inclusion_list_brs"]
+    # columns to remove from dlt_inc_brs and dlt_inc_benchmarks before saving
+    inclusion_cols_to_remove = ["new_exclusion", "exclusion_list_brs"]
+
+    # Filter and clean exclusion data
+    delta_brs = delta_brs.drop(columns=exclusion_cols_to_remove)
+    delta_brs = delta_brs[delta_brs["new_exclusion"] == True]
+
+    delta_benchmarks = delta_benchmarks.drop(columns=exclusion_cols_to_remove)
+    delta_benchmarks = delta_benchmarks[delta_benchmarks["new_exclusion"] == True]
+
+    # Filter and clean inclusion data
+    dlt_inc_brs = dlt_inc_brs.drop(columns=inclusion_cols_to_remove)
+    dlt_inc_brs = dlt_inc_brs[dlt_inc_brs["new_inclusion"] == True]
+
+    dlt_inc_benchmarks = dlt_inc_benchmarks.drop(columns=inclusion_cols_to_remove)
+    dlt_inc_benchmarks = dlt_inc_benchmarks[dlt_inc_benchmarks["new_inclusion"] == True]
+
+    # Clean delta_clarity
+    delta_clarity.drop(columns=["new_inclusion", "inclusion_list"], inplace=True)
+    delta_clarity = delta_clarity[delta_clarity["new_exclusion"] == True]
+
+    # Final cleanup: drop 'new_exclusion' and 'new_inclusion' if present
+    for df in [
+        delta_brs,
+        delta_benchmarks,
+        dlt_inc_brs,
+        dlt_inc_benchmarks,
+        delta_clarity,
+    ]:
+        for col in ["new_exclusion", "new_inclusion"]:
+            if col in df.columns:
+                df.drop(columns=col, inplace=True)
+
+    # clean exclusion list if there is overrides ok
+    delta_brs = clean_exclusion_list_with_ovr(delta_brs)
+    delta_benchmarks = clean_exclusion_list_with_ovr(delta_benchmarks)
+
+    # cleant portfolio and exclusion list
+    delta_brs = delta_brs.apply(clean_portfolio_and_exclusion_list, axis=1)
+    delta_benchmarks = delta_benchmarks.apply(
+        clean_portfolio_and_exclusion_list, axis=1
+    )
+
+    # 8 SAVE INTO EXCEL
+
     # create dict of df and df name
     dfs_dict = {
         "zombie_analysis": zombie_df,
-        "delta_carteras": delta_brs,
-        "delta_benchmarks": delta_benchmarks,
-        "delta_clarity": delta_clarity,
+        "excl_carteras": delta_brs,
+        "excl_benchmarks": delta_benchmarks,
+        "excl_clarity": delta_clarity,
+        "incl_carteras": dlt_inc_brs,
+        "incl_benchmarks": dlt_inc_benchmarks,
         "new_issuers_clarity": new_issuers_clarity,
         "out_issuer_clarity": out_issuer_clarity,
     }
