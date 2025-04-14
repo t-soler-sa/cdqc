@@ -64,8 +64,8 @@ DATAFEED_DIR = config["DATAFEED_DIR"]
 SRI_DATA_DIR = config["SRI_DATA_DIR"]
 paths = config["paths"]
 # Use the paths from config
-df_1_path = paths["PRE_DF_WOVR_PATH"]
-df_2_path = paths["CURRENT_DF_WOUTOVR_PATH"]
+DF_PREV_PATH = paths["PRE_DF_WOVR_PATH"]
+DF_NEW_PATH = paths["CURRENT_DF_WOUTOVR_PATH"]
 CROSSREFERENCE_PATH = paths["CROSSREFERENCE_PATH"]
 BMK_PORTF_STR_PATH = paths["BMK_PORTF_STR_PATH"]
 OVR_PATH = paths["OVR_PATH"]
@@ -130,8 +130,8 @@ def main():
 
     # 1.2.  clarity data
     logger.info("Loading clarity data")
-    df_1 = load_clarity_data(df_1_path, columns_to_read)
-    df_2 = load_clarity_data(df_2_path, columns_to_read)
+    df_1 = load_clarity_data(DF_PREV_PATH, columns_to_read)
+    df_2 = load_clarity_data(DF_NEW_PATH, columns_to_read)
     # let's rename columns in df_1 and df_2 using the rename_dict
     df_1.rename(columns=rename_dict, inplace=True)
     df_2.rename(columns=rename_dict, inplace=True)
