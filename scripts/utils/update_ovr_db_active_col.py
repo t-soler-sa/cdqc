@@ -1,4 +1,4 @@
-# update_ovr_db_active_col
+# update_ovr_db_active_col.py
 
 """
 Script to update the OVR database with active columns.

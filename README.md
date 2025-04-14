@@ -10,3 +10,9 @@ Data quality controls and protocols - scripts and tools to explore and keep chec
 - Aladdin_Clarity_Issuers_{DATE}01.csv in aladdin_data\\crossreference\\
 
 In the future, add inheritance - also datafeed
+
+## PIPELINES/ FLOWS
+
+In this repo you can run 2 flows/pipelines:
+    1. The first one, to get the pre-override analysis
+    2. The second one, once the override db has been updated, your can run the remeining process that would apply the override and generate multiple outpus to share with SAM BAU Infinity and the Asset Managers.

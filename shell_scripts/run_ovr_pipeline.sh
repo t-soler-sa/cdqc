@@ -31,7 +31,7 @@ SCRIPTS=(
 )
 
 # Activate virtual environment
-source "${BASE_DIR}/venv/bin/activate"
+source "${BASE_DIR}/.venv/Script/activate"
 
 # Execute Python scripts in sequence, passing the date parameter
 for script in "${SCRIPTS[@]}"; do
