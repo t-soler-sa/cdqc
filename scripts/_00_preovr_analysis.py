@@ -300,7 +300,7 @@ def main():
     delta_brs = filter_non_empty_lists(delta_brs, "affected_portfolio_str")
     # let's use filter_non_empty_lists to remove rows with empty lists in affected_portfolio_str
     delta_benchmarks = filter_non_empty_lists(
-        delta_benchmarks, "affected_portfolio_str"
+        delta_benchmarks, "affected_benchmark_str"
     )
 
     # ADD TEST FOR INCLUSIONS
@@ -313,23 +313,7 @@ def main():
         delta_brs, "exclusion_list_brs", "affected_portfolio_str"
     )
     delta_benchmarks = filter_rows_with_common_elements(
-        delta_benchmarks, "exclusion_list_brs", "affected_portfolio_str"
-    )
-    # let's use filter_non_empty_lists to remove rows with empty lists in affected_portfolio_str
-    delta_brs = filter_non_empty_lists(delta_brs, "affected_portfolio_str")
-    # let's use filter_non_empty_lists to remove rows with empty lists in affected_portfolio_str
-    delta_benchmarks = filter_non_empty_lists(
-        delta_benchmarks, "affected_portfolio_str"
-    )
-
-    # 5.1. FILTER & SORT DATA & GET RELEVANT DATA FOR INCLUSION ANALYSIS
-
-    # pass filter_rows_with_common_elements for columns exclusion_list_brs and affected_portfolio_str
-    delta_brs = filter_rows_with_common_elements(
-        delta_brs, "exclusion_list_brs", "affected_portfolio_str"
-    )
-    delta_benchmarks = filter_rows_with_common_elements(
-        delta_benchmarks, "exclusion_list_brs", "affected_portfolio_str"
+        delta_benchmarks, "exclusion_list_brs", "affected_benchmark_str"
     )
 
     # let's reset df1 index to permid
