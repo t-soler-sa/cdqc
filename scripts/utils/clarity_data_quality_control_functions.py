@@ -274,6 +274,10 @@ def filter_rows_with_common_elements(df, col1, col2):
     Returns:
         pd.DataFrame: A DataFrame filtered to include only rows where col1 and col2 have a common element.
     """
+    # if col2 = "affected_benchmark_str" flatten list first
+    if col2 == "affected_benchmark_str":
+        df[col2] = df[col2].apply(lambda x: [item for sublist in x for item in sublist])
+
     logger.info(f"Filtering rows with common elements in columns: {col1} and {col2}")
     mask = df.apply(lambda row: bool(set(row[col1]).intersection(row[col2])), axis=1)
     return df[mask].copy()
