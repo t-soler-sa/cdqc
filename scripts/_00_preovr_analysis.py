@@ -12,6 +12,8 @@ The script will output an Excel file with the following sheets:
 """
 
 # IMPORT MODULS & LIBS
+import sys
+
 import pandas as pd
 
 from scripts.utils.dataloaders import (
@@ -118,6 +120,13 @@ def main():
     brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
     brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
     crosreference = load_crossreference(CROSSREFERENCE_PATH)
+    # logg first lines of crossrefernce and the data type of each column
+    logger.info("=======CHECK THIS OUT==========")
+    logger.info(f"Crossreference df: {crosreference.head()}")
+    logger.info(f"Crossreference df dtypes: {crosreference.dtypes}")
+    # log num of missing values in each column
+    logger.info(f"Crossreference df missing values: {crosreference.isna().sum()}")
+
     # get BRS data at issuer level for becnhmarks without empty aladdin_id
     brs_carteras_issuerlevel = get_issuer_level_df(brs_carteras, "aladdin_id")
     # get BRS data at issuer level for becnhmarks without empty aladdin_id
@@ -231,6 +240,33 @@ def main():
 
     # START PRE-OVR ANALYSIS
     logger.info("Starting pre-ovr-analysis")
+
+    # NEW CROSSREFERENCE HAS MULTIPLE ISSUER ID FOR A SINGLE PERMID
+    logger.info(
+        f"Checking index uniqueness: df1 index duplicates: {df_1.index.duplicated().sum()}"
+    )
+    logger.info(
+        f"Checking index uniqueness: df_2 index duplicates: {df_2.index.duplicated().sum()}"
+    )
+    duplicated_rows_df_1 = df_1[df_1.index.duplicated(keep=False)]
+    if not duplicated_rows_df_1.empty:
+        logger.warning(f"\n\n=======CHECK THIS OUT==========\n\n")
+        logger.warning(f"Duplicated indexes found in df1:\n{duplicated_rows_df_1}")
+    duplicated_rows_df_2 = df_2[df_2.index.duplicated(keep=False)]
+    if not duplicated_rows_df_2.empty:
+        logger.warning(f"Duplicated indexes found in df1:\n{duplicated_rows_df_2}")
+    # log index, issuer_name, and aladdin_id for the duplicated_rows_df1 and duplicated_rows_df_2
+    if not duplicated_rows_df_1.empty:
+        logger.warning("\nHERE ARE THE DUPLICATED ISSUERS!!!!!!!\n")
+        logger.warning(
+            f"Duplicated rows in df_1:\n{duplicated_rows_df_1[['issuer_name','aladdin_id']].to_string(index=True)}"
+        )
+    if not duplicated_rows_df_2.empty:
+        logger.warning(
+            f"Duplicated rows in df_2:\n{duplicated_rows_df_2[['issuer_name', 'aladdin_id']].to_string(index=True)}"
+        )
+        sys.exit()
+
     # COMPARE DATA
     logger.info("comparing clarity dataframes")
     delta_clarity = compare_dataframes(df_1, df_2)
