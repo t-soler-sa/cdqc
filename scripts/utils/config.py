@@ -4,9 +4,9 @@ from pathlib import Path
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-from utils.get_date import get_date
-from utils.set_up_log import set_up_log
-from utils.get_output_dir import get_output_dir
+from .get_date import get_date
+from .set_up_log import set_up_log
+from .get_output_dir import get_output_dir
 
 
 def get_config(
