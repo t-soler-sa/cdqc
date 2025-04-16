@@ -28,6 +28,7 @@ delta_test_cols = [
     "str_004_asec",
     "str_005_ec",
     "str_006_sec",
+    "str_007_sect",
     "str_sfdr8_aec",
     "scs_001_sec",
     "scs_002_ec",
@@ -371,30 +372,25 @@ def pair_elements(input_list):
     return [(input_list[i], input_list[i + 1]) for i in range(0, len(input_list), 2)]
 
 
-def clean_exclusion_list_with_ovr(df):
+def clean_exclusion_list_with_ovr(df, exclusion_list_col: str = "exclusion_list_brs"):
     # Define helper function with safety check
     def filter_exclusions(row):
         ovr_dict = row["ovr_list"] if isinstance(row["ovr_list"], dict) else {}
         return [
             code
-            for code in row["exclusion_list_brs"]
+            for code in row[exclusion_list_col]
             if ovr_dict.get(code) not in {"OK", "FLAG"}
         ]
 
     # Apply filtering safely
-    df["exclusion_list_brs"] = df.apply(filter_exclusions, axis=1)
-
-    # Drop rows where exclusion_list_brs is empty after cleaning
-    df = df[
-        df["exclusion_list_brs"].apply(lambda x: isinstance(x, list) and len(x) > 0)
-    ]
+    df[exclusion_list_col] = df.apply(filter_exclusions, axis=1)
 
     return df
 
 
 def clean_portfolio_and_exclusion_list(
     row,
-    affected_portfolio_name="affected_portfolio_str",
+    affected_col_name="affected_portfolio_str",
     exclusion_list_name="exclusion_list_brs",
 ):
     """
@@ -402,7 +398,7 @@ def clean_portfolio_and_exclusion_list(
     on 'exclusion_list_brs'. Then cleans 'exclusion_list_brs' based on the
     filtered results.
     """
-    raw_list = row[affected_portfolio_name]
+    raw_list = row[affected_col_name]
     exclusion_list = row[exclusion_list_name]
 
     # Pair elements first
@@ -423,3 +419,9 @@ def clean_portfolio_and_exclusion_list(
     ]
 
     return row
+
+
+def clean_empty_exclusion_rows(df, target_col: str = "exclusion_list_brs"):
+
+    # Drop rows where exclusion_list_brs is empty after cleaning
+    return df[df[target_col].apply(lambda x: isinstance(x, list) and len(x) > 0)]
