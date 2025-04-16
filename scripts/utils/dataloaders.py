@@ -1,5 +1,6 @@
 import logging
 import re
+import warnings
 from itertools import chain
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
@@ -9,6 +10,9 @@ import pandas as pd
 
 # Module-level logger
 logger = logging.getLogger(__name__)
+
+# Ignore workbook warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 
 # define aux functions to clean columns and convert id columns into string
@@ -45,7 +49,6 @@ def clean_and_convert(df):
     return df
 
 
-# define functions to load data from different sources
 def load_excel(
     file_path: Path, sheet_name: str, clean_n_convert: bool = True
 ) -> pd.DataFrame:
@@ -209,7 +212,14 @@ def load_overrides(file_path: Path, target_cols: list[str] = None) -> pd.DataFra
     """Load overrides from a CSV file."""
     if target_cols is None:
         # Default columns to load if not specified
-        target_cols = ["clarityid", "permid", "brs_id", "ovr_target", "ovr_value"]
+        target_cols = [
+            "clarityid",
+            "permid",
+            "brs_id",
+            "ovr_target",
+            "ovr_value",
+            "ovr_active",
+        ]
     try:
         logger.info(f"Loading overrides from: {file_path}")
         df = pd.read_excel(
@@ -221,36 +231,19 @@ def load_overrides(file_path: Path, target_cols: list[str] = None) -> pd.DataFra
                 "brs_id": str,
                 "ovr_target": str,
                 "ovr_value": str,
+                "ovr_active": bool,
             },
         )
     except Exception:
         logger.exception(f"Failed to load overrides from: {file_path}")
         raise
+
+    # return only active overrides
+    df = df[df["ovr_active"] == True].copy()
+    # remove column "ovr_active"
+    df.drop(columns=["ovr_active"], inplace=True)
+
     return df
-
-
-def filter_strategy_entries(data: dict, key_name: str = "strategy_name") -> dict:
-    logger.info("Filtering strategy entries")
-    """
-    Filters a dictionary of entries to only include those entries 
-    where the value corresponding to key_name is non-empty.
-    
-    Parameters:
-        data (dict): A dictionary where each key maps to another dictionary 
-                     containing at least the keys 'aladdin_id' and key_name.
-        key_name (str): The key to check for a non-empty value. Defaults to 'strategy_name'.
-    
-    Returns:
-        dict: A new dictionary with entries that have non-empty values for key_name.
-    """
-    filtered_data = {}
-    for entry_key, entry_value in data.items():
-        # Check if the entry has the key_name and that its value is non-empty.
-        if key_name in entry_value and entry_value[key_name]:
-            filtered_data[entry_key] = entry_value
-
-    logger.info("Dictonary cleaned of empty strategies")
-    return filtered_data
 
 
 def load_portfolios(
@@ -299,6 +292,31 @@ def load_portfolios(
               ...
             }
     """
+
+    # 0 define aux function filter strategy entries
+    def filter_strategy_entries(data: dict, key_name: str = "strategy_name") -> dict:
+        logger.info("Filtering strategy entries")
+        """
+        Filters a dictionary of entries to only include those entries 
+        where the value corresponding to key_name is non-empty.
+
+        Parameters:
+            data (dict): A dictionary where each key maps to another dictionary 
+                         containing at least the keys 'aladdin_id' and key_name.
+            key_name (str): The key to check for a non-empty value. Defaults to 'strategy_name'.
+
+        Returns:
+            dict: A new dictionary with entries that have non-empty values for key_name.
+        """
+        filtered_data = {}
+        for entry_key, entry_value in data.items():
+            # Check if the entry has the key_name and that its value is non-empty.
+            if key_name in entry_value and entry_value[key_name]:
+                filtered_data[entry_key] = entry_value
+
+        logger.info("Dictonary cleaned of empty strategies")
+        return filtered_data
+
     # 1. Set default columns if none are provided
     if target_cols_portfolio is None:
         target_cols_portfolio = ["aladdin_id", "portfolio_id"]
@@ -424,7 +442,6 @@ def load_portfolios(
     )
 
 
-# define a function to save results in an Excel file
 def save_excel(df_dict: dict, output_dir: Path, file_name: str) -> Path:
     """
     Writes multiple DataFrames to an Excel file with each DataFrame in a separate sheet.
