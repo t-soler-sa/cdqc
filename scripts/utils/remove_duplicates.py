@@ -2,8 +2,8 @@
 
 import time
 
-from config import get_config
-from dataloaders import load_csv
+from scripts.utils.config import get_config
+from scripts.utils.dataloaders import load_csv
 
 
 # Get configuration settings
