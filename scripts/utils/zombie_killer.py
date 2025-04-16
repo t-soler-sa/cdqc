@@ -41,8 +41,9 @@ test_col = [
     "str_003b_ec",
     "str_004_asec",
     "str_005_ec",
-    "art_8_basicos",
     "str_006_sec",
+    "str_007_sect",
+    "art_8_basicos",
     "cs_001_sec",
     "cs_002_ec",
 ]
@@ -56,12 +57,13 @@ merging_cols = [
     "str_004_asec",
     "str_005_ec",
     "str_006_sec",
+    "str_007_sect",
     "str_sfdr8_aec",
     "scs_001_sec",
     "scs_002_ec",
 ]
 
-columns_to_read = ["permid", "isin", "issuer_name"] + test_col
+columns_to_read = ["permid", "issuer_name"] + test_col
 
 rename_dict = {
     "cs_001_sec": "scs_001_sec",
@@ -193,13 +195,20 @@ def group_by_security_description(df):
     return grouped_df
 
 
-def main():
-    # 00 LOAD DATA
-    clarity_df = load_clarity_data(clarity_df_path, columns_to_read)
-    clarity_df.rename(columns=rename_dict, inplace=True)
-    brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
-    brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
-    crosreference = load_crossreference(CROSSREFERENCE_PATH)
+def main(clarity_df=None, brs_carteras=None, brs_benchmarks=None, crosreference=None):
+    # 00 LOAD DATAonly if not provided
+    if clarity_df is None:
+        clarity_df = load_clarity_data(clarity_df_path, columns_to_read)
+        clarity_df.rename(columns=rename_dict, inplace=True)
+
+    if brs_carteras is None:
+        brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
+
+    if brs_benchmarks is None:
+        brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
+
+    if crosreference is None:
+        crosreference = load_crossreference(CROSSREFERENCE_PATH)
 
     # 01 PROCESS DATA
     # add aladdin_id from crossreference to clarity_df
