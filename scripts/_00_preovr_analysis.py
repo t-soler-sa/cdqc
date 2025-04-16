@@ -12,15 +12,9 @@ The script will output an Excel file with the following sheets:
 """
 
 # IMPORT MODULS & LIBS
-import warnings
-from typing import List, Tuple
-from itertools import chain
-from collections import defaultdict
-
-import numpy as np
 import pandas as pd
 
-from utils.dataloaders import (
+from scripts.utils.dataloaders import (
     load_clarity_data,
     load_aladdin_data,
     load_crossreference,
@@ -29,7 +23,7 @@ from utils.dataloaders import (
     save_excel,
 )
 
-from utils.clarity_data_quality_control_functions import (
+from scripts.utils.clarity_data_quality_control_functions import (
     prepare_dataframes,
     compare_dataframes,
     check_new_exclusions,
@@ -45,12 +39,13 @@ from utils.clarity_data_quality_control_functions import (
     clean_inclusion_list,
     clean_portfolio_and_exclusion_list,
     clean_exclusion_list_with_ovr,
+    clean_empty_exclusion_rows,
 )
 
-from utils.zombie_killer import main as zombie_killer
+from scripts.utils.zombie_killer import main as zombie_killer
 
 # Import the centralized configuration
-from utils.config import get_config
+from scripts.utils.config import get_config
 
 # CONFIG SCRIPT
 # Get the common configuration for the Pre-OVR-Analysis script.
@@ -73,8 +68,6 @@ COMMITTEE_PATH = paths["COMMITTEE_PATH"]
 # Define the output directory and file based on the configuration.
 OUTPUT_DIR = config["OUTPUT_DIR"]
 OUTPUT_FILE = OUTPUT_DIR / f"{DATE}_pre_ovr_analysis.xlsx"
-# Ignore workbook warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 
 # DEF CONSTANTS
@@ -88,8 +81,9 @@ clarity_test_col = [
     "str_003b_ec",
     "str_004_asec",
     "str_005_ec",
-    "art_8_basicos",
     "str_006_sec",
+    "str_007_sect",
+    "art_8_basicos",
     "cs_001_sec",
     "cs_002_ec",
 ]
@@ -101,6 +95,7 @@ delta_test_cols = [
     "str_004_asec",
     "str_005_ec",
     "str_006_sec",
+    "str_007_sect",
     "str_sfdr8_aec",
     "scs_001_sec",
     "scs_002_ec",
@@ -135,6 +130,7 @@ def main():
     # let's rename columns in df_1 and df_2 using the rename_dict
     df_1.rename(columns=rename_dict, inplace=True)
     df_2.rename(columns=rename_dict, inplace=True)
+    df_2_copy = df_2.copy()
     # add aladdin_id to df_1 and df_2
     logger.info("Adding aladdin_id to clarity dfs")
     df_1 = df_1.merge(crosreference[["permid", "aladdin_id"]], on="permid", how="left")
@@ -258,7 +254,12 @@ def main():
 
     # 3.   Get Zombie Analysis
     logger.info("Getting zombie analysis df")
-    zombie_df = zombie_killer()
+    zombie_df = zombie_killer(
+        clarity_df=df_2_copy,
+        brs_carteras=brs_carteras,
+        brs_benchmarks=brs_benchmarks,
+        crosreference=crosreference,
+    )
 
     # 4.    PREP DELTAS BEFORE SAVING
     # PREP DELTAS BEFORE SAVING
@@ -351,7 +352,7 @@ def main():
         str_dfs_dict[strategy] = pd.DataFrame(rows)
 
     # Prepare lookups for efficient mapping
-    permid_to_df1 = df_1  # df_1 already has permid as index
+    permid_to_df1 = df_1.set_index("permid").copy()  # df_1 already has permid as index
     aladdin_to_brs = brs_carteras_issuerlevel.set_index("aladdin_id")
 
     for strategy_name, df in str_dfs_dict.items():
@@ -451,13 +452,23 @@ def main():
                 df.drop(columns=col, inplace=True)
 
     # clean exclusion list if there is overrides ok
+    logger.info("Cleaning exclusion lists with overrides")
     delta_brs = clean_exclusion_list_with_ovr(delta_brs)
     delta_benchmarks = clean_exclusion_list_with_ovr(delta_benchmarks)
+    delta_clarity = clean_exclusion_list_with_ovr(
+        delta_clarity, exclusion_list_col="exclusion_list"
+    )
 
     # cleant portfolio and exclusion list
+    logger.info("Cleaning portfolio and exclusion lists")
     delta_brs = delta_brs.apply(clean_portfolio_and_exclusion_list, axis=1)
-    delta_benchmarks = delta_benchmarks.apply(
-        clean_portfolio_and_exclusion_list, axis=1
+
+    # remove rows with empyt exclusion lists
+    logger.info("Cleaning empty exclusion lists")
+    delta_brs = clean_empty_exclusion_rows(delta_brs)
+    delta_benchmarks = clean_empty_exclusion_rows(delta_benchmarks)
+    delta_clarity = clean_empty_exclusion_rows(
+        delta_clarity, target_col="exclusion_list"
     )
 
     # 8 SAVE INTO EXCEL
