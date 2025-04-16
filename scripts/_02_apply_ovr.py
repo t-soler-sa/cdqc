@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 # 0. CONFIGURATION & I/O PATHS
 # Get the common configuration for the generator of override list for SAM BAU Infinity
-config = get_config("01-generate_ovr_lists", interactive=False)
+config = get_config("01-generate_ovr_lists", interactive=False, gen_output_dir=False)
 logger = config["logger"]
 DATE = config["DATE"]
 paths = config["paths"]
