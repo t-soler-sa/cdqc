@@ -45,7 +45,7 @@ def get_config(
 
     # Define paths that are common for many scripts
     paths = {
-        "RAW_DF_WOUT_OVR_PATH": DATAFEED_DIR
+        "CURRENT_DF_WOUTOVR_SEC_PATH": DATAFEED_DIR
         / "raw_dataset"
         / f"{YEAR}"
         / f"{DATE}01_Production"
