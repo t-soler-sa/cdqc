@@ -3,8 +3,8 @@ import warnings
 
 import pandas as pd
 
-from utils.dataloaders import load_overrides
-from utils.config import get_config
+from scripts.utils.dataloaders import load_overrides
+from scripts.utils.config import get_config
 
 # Ignore workbook warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
@@ -37,7 +37,7 @@ overrides_mapping = {
 
 # 2. LOAD OVERRIDES
 overrides_df = load_overrides(
-    OVR_PATH, target_cols=["clarityid", "ovr_target", "ovr_value"]
+    OVR_PATH, target_cols=["clarityid", "ovr_target", "ovr_value", "ovr_active"]
 )
 
 
