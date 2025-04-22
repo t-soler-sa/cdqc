@@ -2,7 +2,7 @@
 
 import warnings
 
-from utils.dataloaders import (
+from scripts.utils.dataloaders import (
     load_clarity_data,
     load_aladdin_data,
     load_crossreference,
@@ -11,10 +11,10 @@ from utils.dataloaders import (
 )
 
 # Import the centralized configuration
-from utils.config import get_config
+from scripts.utils.config import get_config
 
 # import relevant libraries from 00_preovr_analysis
-from utils.clarity_data_quality_control_functions import (
+from scripts.utils.clarity_data_quality_control_functions import (
     prepare_dataframes,
     compare_dataframes,
     check_new_exclusions,
