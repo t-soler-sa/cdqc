@@ -1,3 +1,5 @@
+# get_date.py
+
 import argparse
 import logging
 import sys
@@ -22,7 +24,7 @@ def get_date() -> str:
     if "ipykernel_launcher" in sys.argv[0]:
         args, _ = parser.parse_known_args()
     else:
-        args = parser.parse_args()
+        args, _ = parser.parse_known_args()
 
     if args.date and validate_date(args.date):
         logger.info("Date provided as command-line argument: %s", args.date)
