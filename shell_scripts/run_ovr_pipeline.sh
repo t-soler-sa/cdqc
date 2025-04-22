@@ -36,7 +36,7 @@ source "${BASE_DIR}/.venv/Script/activate"
 # Execute Python scripts in sequence, passing the date parameter
 for script in "${SCRIPTS[@]}"; do
     echo "Running $script"
-    python "${BASE_DIR}/scripts/${script}" "$DATE"
+    python -m scripts.${script%.py} --date "$DATE"
     
     # Check if the script executed successfully
     if [ $? -ne 0 ]; then
