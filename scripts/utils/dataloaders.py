@@ -148,6 +148,7 @@ def load_clarity_data(file_path: Path, target_cols: list[str] = None) -> pd.Data
                     "ClarityID": str,
                     "clarityid": str,
                 },
+                low_memory=False,
             )
             df.columns = clean_columns(df.columns)
     except Exception:
