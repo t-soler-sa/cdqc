@@ -18,6 +18,19 @@ fi
 
 # Assign the first parameter to the DATE variable
 DATE=$1
+SIMPLE_FLAG=""
+
+# Optional second argument
+# Check if the SIMPLE parameter is provided
+if [ $# -eq 2 ]; then
+    if [[ $2 == "simple" ]]; then
+        echo "Simple parameter provided! Simplified override analysis will be generated"
+        SIMPLE_FLAG="--simple"
+    else
+        echo "Invalid second parameter. If you want simplifed ovr-analysis, plese use 'simple'"
+        exit 1
+    fi
+fi
 
 # Define the base directory
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
@@ -36,8 +49,17 @@ source "${BASE_DIR}/.venv/Scripts/activate"
 for script in "${SCRIPTS[@]}"; do
     script_module=${script%.py}
     script_module=${script_module//\//.} # Convert file path to module path
+    
     echo "Running $script_module"
-    python -m "scripts.${script_module}" "$DATE"
+    
+    # Check if the script is the pre override analysis script
+    if [[ $script_module=="_00_preovr_analysis" && -n $SIMPLE_FLAG ]]; then
+        python -m "scripts.${script_module}" $SIMPLE_FLAG --date "$DATE"
+        
+    else
+        python -m "scripts.${script_module}" --date "$DATE"
+    fi
+    
     
     # Check if the script executed successfully
     if [ $? -ne 0 ]; then
