@@ -20,7 +20,7 @@ YEAR = config["YEAR"]
 
 # define BASE_DIRECTORY
 # Define paths from configuration
-INPUT_PATH = config["paths"]["RAW_DF_WOUT_OVR_PATH"]
+INPUT_PATH = config["paths"]["CURRENT_DF_WOUTOVR_SEC_PATH"]
 OUTPUT_DIR = config["paths"]["PROCESSED_DFS_WOUTOVR_PATH"]
 OUTPUT_PATH = OUTPUT_DIR / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv"
 
