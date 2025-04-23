@@ -13,6 +13,7 @@ The script will output an Excel file with the following sheets:
 
 # IMPORT MODULS & LIBS
 import sys
+import argparse
 
 import pandas as pd
 
@@ -110,8 +111,27 @@ rename_dict = {
 }
 
 
-# DEF MAIN
-def main():
+# define parser function
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="generate only the full pre-override analysis or also the simplified version"
+    )
+
+    # add argument so user can choose if it wants both versions of the pre-ovr analysis
+    parser.add_argument(
+        "--simple",
+        action="store_true",
+        help="Do you want to generate simplified version of the pre-ovr analysis?",
+    )
+
+    # add positional argument date to not work together with the get_date script
+    parser.add_argument("--date", nargs="?", help="Date in YYYYMM format (positional)")
+
+    return parser
+
+
+# Define main function
+def main(simple: bool = False):
     logger.info(f"Starting pre-ovr-analysis for {DATE}.")
     # 1.    LOAD DATA
 
@@ -533,8 +553,19 @@ def main():
     dfs_dict.update(str_dfs_dict)
 
     # save to excel
-    save_excel(dfs_dict, OUTPUT_DIR, file_name="pre_ovr_analysis")
+    if simple:
+        # save simplified version and regular version
+        save_excel(str_dfs_dict, OUTPUT_DIR, file_name="pre_ovr_simple_analysis")
+        save_excel(dfs_dict, OUTPUT_DIR, file_name="pre_ovr_analysis")
+    else:
+        save_excel(dfs_dict, OUTPUT_DIR, file_name="pre_ovr_analysis")
 
 
 if __name__ == "__main__":
-    main()
+    # check if user wants also the simplified ovr analysis
+    args = parse_arguments().parse_args()
+    if args.simple:
+        # generate simplify over analysis
+        main(simple=True)
+    else:
+        main()
