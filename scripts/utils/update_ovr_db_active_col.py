@@ -7,6 +7,7 @@ If datafeed value and the override value are the same active column is FALSE.
 """
 from datetime import datetime
 from pathlib import Path
+import sys
 
 import pandas as pd
 
@@ -41,19 +42,79 @@ def load_overrides(path):
         raise
 
 
-def override_active(row, df_clarity):
-    permid = row["permid"]
-    ovr_value = row["ovr_value"]
-    ovr_target = row["ovr_target"]
+def update_df_value_column(
+    overrides: pd.DataFrame, df_clarity_filtered: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Updates the 'df_value' column in the overrides DataFrame using values
+    from the df_clarity_filtered DataFrame based on matching 'permid' and 'ovr_target'.
 
-    if (df_clarity["permid"] == permid).any() and (ovr_target in df_clarity.columns):
-        df_val = df_clarity.loc[df_clarity["permid"] == permid, ovr_target].values[0]
-        is_active = df_val != ovr_value
-        if not is_active:
-            logger.info(f"Override on {ovr_target} for permid {permid} is not active")
-        return is_active
-    else:
-        return None
+    Parameters:
+    - overrides: DataFrame containing override entries with 'permid' and 'ovr_target' columns.
+    - df_clarity_filtered: Filtered DataFrame from Clarity data with columns including 'permid'.
+
+    Returns:
+    - A new DataFrame with the updated 'df_value' column.
+    """
+    # Melt df_clarity_filtered to long format for easier matching
+    clarity_melted = df_clarity_filtered.melt(
+        id_vars="permid", var_name="ovr_target", value_name="clarity_value"
+    )
+
+    # Merge to bring in the matching clarity value
+    overrides_updated = overrides.merge(
+        clarity_melted, how="left", on=["permid", "ovr_target"]
+    )
+
+    # Update the df_value column only where clarity_value is present
+    overrides["df_value"] = overrides_updated["clarity_value"].combine_first(
+        overrides["df_value"]
+    )
+
+    return overrides
+
+
+def update_override_active(
+    overrides: pd.DataFrame, df_clarity_filtered: pd.DataFrame, logger=None
+) -> pd.DataFrame:
+    """
+    Updates 'ovr_active' in the overrides DataFrame by comparing 'ovr_value'
+    with corresponding values from df_clarity_filtered.
+
+    Parameters:
+    - overrides: DataFrame with 'permid', 'ovr_target', 'ovr_value'.
+    - df_clarity_filtered: DataFrame with clarity data, structured horizontally.
+    - logger: Logger object (optional).
+
+    Returns:
+    - overrides: DataFrame with updated 'ovr_active' status.
+    """
+
+    # Melt df_clarity_filtered to match overrides structure
+    clarity_melted = df_clarity_filtered.melt(
+        id_vars="permid", var_name="ovr_target", value_name="clarity_value"
+    )
+
+    # Merge with overrides to get clarity_value aligned
+    overrides_merged = overrides.merge(
+        clarity_melted, on=["permid", "ovr_target"], how="left"
+    )
+
+    # Set ovr_active to False if ovr_value matches clarity_value
+    condition = overrides_merged["ovr_value"] == overrides_merged["clarity_value"]
+
+    # Set ovr_active to False where condition is True
+    overrides.loc[condition, "ovr_active"] = False
+
+    # Optional logging
+    if logger:
+        inactive_rows = overrides_merged[condition]
+        for _, row in inactive_rows.iterrows():
+            logger.info(
+                f"Override on {row['ovr_target']} for permid {row['permid']} is not active"
+            )
+
+    return overrides
 
 
 def main():
@@ -66,10 +127,20 @@ def main():
     # save back columns for backup
     overrides_copy = overrides.copy()
 
+    # set permid in df_clarity & overrides as str
+    df_clarity["permid"] = df_clarity["permid"].astype(str)
+    overrides["permid"] = overrides["permid"].astype(str)
+
     # filter out only the columns we need with using the relevant permids
     df_clarity_filtered = df_clarity[
         df_clarity["permid"].isin(overrides["permid"])
     ].copy()
+
+    if df_clarity_filtered.shape[0] < 1:
+        logger.warning("No matches between df_clarity and overrrides!")
+        sys.exit()
+
+    logger.info(f"Size df_clarity_filterd is {df_clarity_filtered.shape[0]}")
 
     # define output paths
     output_file = Path(
@@ -81,11 +152,12 @@ def main():
     )
 
     # update active status of overrides
-    logger.info(f"updating overrides active status")
-    for idx, row in overrides.iterrows():
-        ovr_active = override_active(row, df_clarity_filtered)
-        if ovr_active is False:
-            overrides.at[idx, "ovr_active"] = False
+    logger.info("updating overrides active status")
+    overrides = update_override_active(overrides, df_clarity_filtered, logger)
+
+    # update active column df_value of overrides with data from df_clarity
+    logger.info("Updating overrides df_value column")
+    overrides = update_df_value_column(overrides, df_clarity_filtered)
 
     overrides = overrides[overrides_copy.columns]
 
