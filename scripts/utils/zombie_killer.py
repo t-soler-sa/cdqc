@@ -15,7 +15,7 @@ from utils.config import get_config
 from utils.dataloaders import load_aladdin_data, load_clarity_data, load_crossreference
 
 # Get the common configuration for the zombie-killer script.
-config = get_config("zombie-killer", interactive=False)
+config = get_config(script_name="zombie-killer")
 logger = config["logger"]
 DATE = config["DATE"]
 YEAR = config["YEAR"]
