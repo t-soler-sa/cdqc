@@ -52,7 +52,7 @@ from scripts.utils.config import get_config
 
 # CONFIG SCRIPT
 # Get the common configuration for the Pre-OVR-Analysis script.
-config = get_config("pre-ovr-analysis", interactive=False)
+config = get_config("pre-ovr-analysis", interactive=False, gen_output_dir=True)
 logger = config["logger"]
 DATE = config["DATE"]
 YEAR = config["YEAR"]
@@ -67,6 +67,7 @@ DF_NEW_PATH = paths["CURRENT_DF_WOUTOVR_PATH"]
 CROSSREFERENCE_PATH = paths["CROSSREFERENCE_PATH"]
 BMK_PORTF_STR_PATH = paths["BMK_PORTF_STR_PATH"]
 OVR_PATH = paths["OVR_PATH"]
+OVR_BETA_PATH = SRI_DATA_DIR / "overrides" / "overrides_db_beta.xlsx"
 COMMITTEE_PATH = paths["COMMITTEE_PATH"]
 # Define the output directory and file based on the configuration.
 OUTPUT_DIR = config["OUTPUT_DIR"]
@@ -143,9 +144,9 @@ def main(simple: bool = False):
     # logg first lines of crossrefernce and the data type of each column
     # logger.info("=======CHECK THIS OUT==========")
     # logger.info(f"Crossreference df: {crosreference.head()}")
-    logger.info(f"Crossreference df dtypes: {crosreference.dtypes}")
+    # logger.info(f"Crossreference df dtypes: {crosreference.dtypes}")
     # log num of missing values in each column
-    logger.info(f"Crossreference df missing values: {crosreference.isna().sum()}")
+    # logger.info(f"Crossreference df missing values: {crosreference.isna().sum()}")
 
     # remove duplicate and nan permid in crossreference
     logger.info("Removing duplicates and NaN values from crossreference")
@@ -179,7 +180,15 @@ def main(simple: bool = False):
 
     # 1.3.   ESG Team data: Overrides & Portfolios
     logger.info("Loading SRI Team Data: Overrides, Portfolios & Benchmark SRI Strategy")
-    overrides = load_overrides(OVR_PATH)
+
+    """
+    We will test the pre-ovr analys with the overrides from the beta version of the overrides database
+    Uncomment the following lines to use the regular version of the overrides database
+    """
+
+    # overrides = load_overrides(OVR_PATH)
+    logger.info("Loading overrides data with beta version of the ovr db")
+    overrides = load_overrides(OVR_BETA_PATH)
     # rename column brs_id to aladdin_id
     overrides.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
     # rename value column "ovr_target" using rename_dict if value is string
@@ -555,10 +564,10 @@ def main(simple: bool = False):
     # save to excel
     if simple:
         # save simplified version and regular version
-        save_excel(str_dfs_dict, OUTPUT_DIR, file_name="pre_ovr_simple_analysis")
-        save_excel(dfs_dict, OUTPUT_DIR, file_name="pre_ovr_analysis")
+        save_excel(str_dfs_dict, OUTPUT_DIR, file_name="pre_ovr_simple_analysis_beta")
+        save_excel(dfs_dict, OUTPUT_DIR, file_name="pre_ovr_analysis_beta")
     else:
-        save_excel(dfs_dict, OUTPUT_DIR, file_name="pre_ovr_analysis")
+        save_excel(dfs_dict, OUTPUT_DIR, file_name="pre_ovr_analysis_beta")
 
 
 if __name__ == "__main__":
