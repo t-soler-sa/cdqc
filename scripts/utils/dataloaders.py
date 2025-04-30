@@ -223,18 +223,30 @@ def load_overrides(file_path: Path, target_cols: list[str] = None) -> pd.DataFra
         ]
     try:
         logger.info(f"Loading overrides from: {file_path}")
-        df = pd.read_excel(
-            file_path,
-            usecols=target_cols,
-            dtype={
-                "clarityid": str,
-                "permid": str,
-                "brs_id": str,
-                "ovr_target": str,
-                "ovr_value": str,
-                "ovr_active": bool,
-            },
-        )
+        try:
+            df = pd.read_excel(
+                file_path,
+                usecols=target_cols,
+                dtype={
+                    "clarityid": str,
+                    "permid": str,
+                    "brs_id": str,
+                    "ovr_target": str,
+                    "ovr_value": str,
+                    "ovr_active": bool,
+                },
+            )
+        except ValueError as ve:
+            logger.error(
+                f"Error reading 'ovr_active' column from {file_path}. "
+                f"This usually indicates missing or invalid boolean values in column 'ovr_active'. "
+                f"Please check the file and ensure that the column contains only boolean values (TRUE/FALSE) and that is complete. "
+                f"Original error: {ve}"
+            )
+            raise ValueError(
+                f"'ovr_active' column in {file_path} contains missing or non-boolean values. Cannot proceed."
+            ) from ve
+
     except Exception:
         logger.exception(f"Failed to load overrides from: {file_path}")
         raise
