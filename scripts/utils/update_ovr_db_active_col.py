@@ -143,13 +143,12 @@ def main():
     logger.info(f"Size df_clarity_filterd is {df_clarity_filtered.shape[0]}")
 
     # define output paths
-    output_file = Path(
-        r"C:\Users\n740789\Documents\clarity_data_quality_controls\excel_books\sri_data\overrides\overrides_db_beta.xlsx"
+    base_path = Path(
+        r"C:\Users\n740789\Documents\clarity_data_quality_controls\excel_books\sri_data\overrides"
     )
-
-    backup_file = Path(
-        rf"C:\Users\n740789\Documents\clarity_data_quality_controls\excel_books\sri_data\overrides\overrides_db_backup\{DATE}_override_db.xlsx"
-    )
+    output_file = base_path / "overrides_db_beta.xlsx"
+    backup_file = base_path / "overrides_db_backup" / f"{DATE}_override_db.xlsx"
+    deactivated_overrides_file = base_path / f"{DATE}_deactivated_overrides.xlsx"
 
     # update active status of overrides
     logger.info("updating overrides active status")
@@ -164,8 +163,17 @@ def main():
     logger.info(
         f"Saving updated overrides to {output_file}\nand backup to {backup_file}"
     )
+
+    # RETURN DF OF OVERRIDES THAT HAS BEEN DEACTIVATED
+    deactivated_overrides = overrides[overrides["ovr_active"] == False]
+    # log length of deactivated overrides
+    logger.info(f"Number of deactivated overrides: {len(deactivated_overrides)}")
+
+    # save the updated overrides to the output file
+    logger.info(f"Saving updated overrides to {output_file}")
     overrides.to_excel(output_file, index=False)
     overrides_copy.to_excel(backup_file, index=False)
+    deactivated_overrides.to_excel(deactivated_overrides_file, index=False)
 
 
 if __name__ == "__main__":
