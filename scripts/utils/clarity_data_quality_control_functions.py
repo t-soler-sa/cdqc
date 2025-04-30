@@ -275,12 +275,24 @@ def filter_rows_with_common_elements(df, col1, col2):
     Returns:
         pd.DataFrame: A DataFrame filtered to include only rows where col1 and col2 have a common element.
     """
+
     # if col2 = "affected_benchmark_str" flatten list first
+    def flatten_mixed_list(val):
+        if isinstance(val, list):
+            flat = []
+            for item in val:
+                if isinstance(item, list):
+                    flat.extend(item)
+                else:
+                    flat.append(item)
+            return flat
+        return val
+
     if col2 == "affected_benchmark_str":
-        df[col2] = df[col2].apply(lambda x: [item for sublist in x for item in sublist])
+        df[col2] = df[col2].apply(flatten_mixed_list)
 
     logger.info(f"Filtering rows with common elements in columns: {col1} and {col2}")
-    mask = df.apply(lambda row: bool(set(row[col1]).intersection(row[col2])), axis=1)
+    mask = df.apply(lambda row: bool(set(row[col1]) & set(row[col2])), axis=1)
     return df[mask].copy()
 
 
