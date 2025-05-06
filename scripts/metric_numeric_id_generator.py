@@ -16,10 +16,10 @@ output_file_path = base_dir_path / "esg_dim_metrics.csv"
 
 # Mapping dictionaries
 provider_codes = {
-    "Clarity.ai": "10",
-    "NASDAQ": "20",
-    "Sustainalytics": "30",
-    "Santander Group": "00",
+    "Clarity.ai": "20",
+    "NASDAQ": "30",
+    "Sustainalytics": "40",
+    "Santander Group": "10",
 }
 
 category_codes = {
@@ -271,7 +271,7 @@ def get_theme_code(metric_name):
 def get_topic_code(theme_code):
     for topic_details in topic_codes.values():
         if theme_code in topic_details["themes_list"]:
-            return str(topic_details["topic_id"]).zfill(3)
+            return topic_details["topic_id"].zfill(3)
     return "999"
 
 
@@ -300,7 +300,7 @@ def get_category_detail_code(metric_category, metric_name, provider):
 
 
 def generate_metric_id(row):
-    return f"{provider_codes.get(row['data_provider'],'99')}{category_codes.get(row['metric_category'],'99')}{get_topic_code(get_theme_code(row['metric_name']))}{get_theme_code(row['metric_name'])}{get_category_detail_code(row['metric_category'],row['metric_name'],row['data_provider'])}{data_type_codes.get(row['metric_type'],'99')}"
+    return f"'{provider_codes.get(row['data_provider'],'99')}{category_codes.get(row['metric_category'],'99')}{get_topic_code(get_theme_code(row['metric_name']))}{get_theme_code(row['metric_name'])}{get_category_detail_code(row['metric_category'],row['metric_name'],row['data_provider'])}{data_type_codes.get(row['metric_type'],'99')}"
 
 
 def main():
@@ -309,6 +309,7 @@ def main():
     df["metric_id"] = df.apply(generate_metric_id, axis=1)
     df = df[["metric_id"] + [col for col in df.columns if col != "metric_id"]]
     df.to_csv(output_file_path, index=False)
+    logger.info(f"Metric IDs generated and saved to {output_file_path}")
 
 
 if __name__ == "__main__":
