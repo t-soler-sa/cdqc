@@ -52,7 +52,9 @@ from scripts.utils.config import get_config
 
 # CONFIG SCRIPT
 # Get the common configuration for the Pre-OVR-Analysis script.
-config = get_config("pre-ovr-analysis", interactive=False, gen_output_dir=True)
+config = get_config(
+    "pre-ovr-analysis", interactive=False, gen_output_dir=True, output_dir_dated=True
+)
 logger = config["logger"]
 DATE = config["DATE"]
 YEAR = config["YEAR"]

@@ -1,5 +1,5 @@
 # config.py
-
+import sys
 from pathlib import Path
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -13,6 +13,7 @@ def get_config(
     script_name: str = "default",
     interactive: bool = False,
     gen_output_dir: bool = False,
+    output_dir_dated: bool = False,
     auto_date: bool = True,
     fixed_date: str = None,
 ) -> dict:
@@ -38,8 +39,16 @@ def get_config(
         DATE = get_date()  # Expected to return a valid date string in "YYYYMM" format.
     else:
         if fixed_date is None:
-            raise ValueError("fixed_date must be provided when get_date is False.")
-        DATE = fixed_date
+            logger.warning("fixed_date must be provided when get_date is False.")
+            try:
+                input_date = input("Please enter the date in YYYYMM format: ").strip()
+                fixed_date = input_date
+            except EOFError:
+                logger.error("No input provided for date. Exiting.")
+                sys.exit(1)
+        else:
+            # Validate the fixed_date format
+            DATE = fixed_date
 
     YEAR = DATE[:4]
     date_obj = datetime.strptime(DATE, "%Y%m")
@@ -94,9 +103,26 @@ def get_config(
         / f"{DATE}_sustainalytics_controversies.xlsx",
     }
 
-    if gen_output_dir:
-        # Determine OUTPUT_DIR based on the script name, passing the interactive flag.
-        OUTPUT_DIR = get_output_dir(script_name, SRI_DATA_DIR, interactive=interactive)
+    # If interactive  & generate output dir true, Determine OUTPUT_DIR
+    # based on the script name, either using date if the structure of the output dir needs it...
+    if gen_output_dir and output_dir_dated:
+
+        OUTPUT_DIR = get_output_dir(
+            script_name=script_name,
+            sri_data_dir=SRI_DATA_DIR,
+            interactive=interactive,
+            dated=True,
+            dir_date=DATE,
+            logger=logger,
+        )
+    # ... or without date if the user does not need structure of the output to have it.
+    elif gen_output_dir:
+        OUTPUT_DIR = get_output_dir(
+            script_name=script_name,
+            sri_data_dir=SRI_DATA_DIR,
+            interactive=interactive,
+            logger=logger,
+        )
     else:
         OUTPUT_DIR = None
 
