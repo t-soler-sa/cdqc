@@ -11,16 +11,32 @@ def get_output_dir(
     logger: object = None,
 ) -> Path:
     """
-    Determines and creates the output directory based on the script name.
+    Determines the output directory path based on the script name, user interaction,
+    and optional date-based structuring, then creates the directory if it does not exist.
 
     Parameters:
-        script_name (str): The name of the script.
-        sri_data_dir (Path): The base directory (as a pathlib.Path) where the output directory will be created.
-        interactive (bool): If False, user prompts will be disabled and a default directory name will be used.
-                            Defaults to True.
+        script_name (str): Name of the calling script used to determine the directory mapping.
+        sri_data_dir (Path): Base directory where output subdirectories will be created.
+        interactive (bool): If True, prompts the user to confirm or choose the directory name when
+                            not found in the predefined mapping. Defaults to True.
+        dated (bool): If True, appends a year and year-month structure to the directory path using dir_date.
+                      Defaults to False.
+        dir_date (str): Required if `dated` is True. A string in 'YYYYMM' format specifying the year and month.
+        logger (object): Logger instance used to log informational and error messages throughout the process.
 
     Returns:
-        Path: The full path of the output directory.
+        Path: A pathlib.Path object pointing to the created or existing output directory.
+
+    Raises:
+        ValueError: If `dated` is True but `dir_date` is missing or not in the 'YYYYMM' format.
+        Exception: If directory creation fails due to underlying filesystem or permission errors.
+
+    Behavior:
+        - Uses a predefined mapping of script names to standardized directory names.
+        - In non-interactive mode, defaults to using the lowercased script name when no mapping exists.
+        - In interactive mode, prompts the user to confirm or select a directory name when no mapping exists.
+        - When `dated` is True, further nests the directory within 'year/yearmonth' subdirectories.
+        - Ensures the target directory exists by creating it if necessary.
     """
     mapping = {
         "zombie-killer": "zombie_list",
