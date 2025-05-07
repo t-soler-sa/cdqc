@@ -143,12 +143,6 @@ def main(simple: bool = False):
     brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
     brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
     crosreference = load_crossreference(CROSSREFERENCE_PATH)
-    # logg first lines of crossrefernce and the data type of each column
-    # logger.info("=======CHECK THIS OUT==========")
-    # logger.info(f"Crossreference df: {crosreference.head()}")
-    # logger.info(f"Crossreference df dtypes: {crosreference.dtypes}")
-    # log num of missing values in each column
-    # logger.info(f"Crossreference df missing values: {crosreference.isna().sum()}")
 
     # remove duplicate and nan permid in crossreference
     logger.info("Removing duplicates and NaN values from crossreference")
@@ -159,9 +153,6 @@ def main(simple: bool = False):
     brs_carteras_issuerlevel = get_issuer_level_df(brs_carteras, "aladdin_id")
     # get BRS data at issuer level for becnhmarks without empty aladdin_id
     brs_benchmarks_issuerlevel = get_issuer_level_df(brs_benchmarks, "aladdin_id")
-    logger.info(
-        f'Crossreference df missing values after "cleaning": {crosreference.isna().sum()}'
-    )
 
     # 1.2.  clarity data
     logger.info("Loading clarity data")
