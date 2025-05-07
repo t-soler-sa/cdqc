@@ -3,10 +3,10 @@
 # Record the start time
 start_time=$(date +%s)
 
-# Check if date parameter is provided
-if [ $# -eq 0 ]; then
+# Validate at least one argument
+if [ $# -lt 1 ]; then
     echo "Please provide a date parameter (format: yyyymm)"
-    echo "Example: ./run_datapipeline.sh 202411"
+    echo "Example: ./run_pre_ovr_pipeline.sh 202411 simple"
     exit 1
 fi
 
@@ -19,41 +19,36 @@ fi
 # Assign the first parameter to the DATE variable
 DATE=$1
 SIMPLE_FLAG=""
-
-# Optional second argument
-# Check if the SIMPLE parameter is provided
-if [ $# -eq 2 ]; then
-    if [[ $2 == "simple" ]]; then
-        echo "Simple parameter provided! Simplified override analysis will be generated"
-        SIMPLE_FLAG="--simple"
-    else
-        echo "Invalid second parameter. If you want simplifed ovr-analysis, plese use 'simple'"
-        exit 1
-    fi
-fi
-
-
-# Define the base directory
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
-
-# Array of scripts to run
 SCRIPTS=(
     "utils/remove_duplicates.py"
     "utils/update_ovr_db_active_col.py"
     "_00_preovr_analysis.py"
 )
 
-# Optional third argument
-# Check if only to run the pre override analysis
-if [ $# -eq 3 ]; then
-    if [[ $3 == "only_preovr" ]]; then
-        echo "Only pre override analysis will be generated"
-        SCRIPTS=("_00_preovr_analysis.py")
-    else
-        echo "Invalid third parameter. If you want to run only pre override analysis, please use 'only_preovr'"
-        exit 1
-    fi
-fi
+# Shift to remove first argument (date), then parse the rest
+shift
+
+for arg in "$@"; do
+    case "$arg" in
+        simple)
+            echo "Simple parameter provided! Simplified override analysis will be generated"
+            SIMPLE_FLAG="--simple"
+            ;;
+        only_preovr)
+            echo "Only pre override analysis will be generated"
+            SCRIPTS=("_00_preovr_analysis.py")
+            ;;
+        *)
+            echo "Unknown argument: $arg"
+            echo "Valid options after the date are: 'simple', 'only_preovr'"
+            exit 1
+            ;;
+    esac
+done
+
+
+# Define the base directory
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
 
 # Activate virtual environment
 source "${BASE_DIR}/.venv/Scripts/activate"
@@ -67,7 +62,8 @@ for script in "${SCRIPTS[@]}"; do
     
     # Check if the script is the pre override analysis script
     if [[ $script_module=="_00_preovr_analysis" && -n $SIMPLE_FLAG ]]; then
-        python -m "scripts.${script_module}" $SIMPLE_FLAG --date "$DATE"
+        echo "Running pre override analysis with simple flag enabled -> $SIMPLE_FLAG"
+        python -m "scripts.${script_module}" "$SIMPLE_FLAG" --date "$DATE"
         
     else
         python -m "scripts.${script_module}" --date "$DATE"
