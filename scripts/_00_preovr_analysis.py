@@ -557,10 +557,12 @@ def main(simple: bool = False):
     # save to excel
     if simple:
         # save simplified version and regular version
-        save_excel(str_dfs_dict, OUTPUT_DIR, file_name="pre_ovr_simple_analysis_beta")
-        save_excel(dfs_dict, OUTPUT_DIR, file_name="pre_ovr_analysis_beta")
+        save_excel(
+            str_dfs_dict, OUTPUT_DIR, file_name=f"{DATE}dfs_pre_ovr_analysis_str_level"
+        )
+        save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}dfs_pre_ovr_analysis")
     else:
-        save_excel(dfs_dict, OUTPUT_DIR, file_name="pre_ovr_analysis_beta")
+        save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}dfs_pre_ovr_analysis")
 
 
 if __name__ == "__main__":
@@ -568,6 +570,10 @@ if __name__ == "__main__":
     args = parse_arguments().parse_args()
     if args.simple:
         # generate simplify over analysis
+        logger.info("Generating simplified version of the pre-ovr analysis too")
         main(simple=True)
     else:
+        logger.info(
+            "No simple flag found! Generating only full version of the pre-ovr analysis"
+        )
         main()
