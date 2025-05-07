@@ -32,6 +32,7 @@ if [ $# -eq 2 ]; then
     fi
 fi
 
+
 # Define the base directory
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
 
@@ -41,6 +42,18 @@ SCRIPTS=(
     "utils/update_ovr_db_active_col.py"
     "_00_preovr_analysis.py"
 )
+
+# Optional third argument
+# Check if only to run the pre override analysis
+if [ $# -eq 3 ]; then
+    if [[ $3 == "only_preovr" ]]; then
+        echo "Only pre override analysis will be generated"
+        SCRIPTS=("_00_preovr_analysis.py")
+    else
+        echo "Invalid third parameter. If you want to run only pre override analysis, please use 'only_preovr'"
+        exit 1
+    fi
+fi
 
 # Activate virtual environment
 source "${BASE_DIR}/.venv/Scripts/activate"
