@@ -18,18 +18,39 @@ def get_config(
     fixed_date: str = None,
 ) -> dict:
     """
-    Set up and return common configuration settings.
+    Generate and return a configuration dictionary containing shared constants, directory paths,
+    and logging setup based on runtime parameters.
 
-    This function configures the logger, retrieves the date (in YYYYMM format),
-    and sets up common file paths.
+    This function prepares the environment for data processing scripts by:
+    - Setting up a logger tied to the script name.
+    - Determining the current date (and previous month) either automatically or from user input.
+    - Assembling directory paths commonly used across the data pipeline.
+    - Optionally determining an output directory based on configuration.
 
     Parameters:
-        script_name (str): The name of the script.
-        interactive (bool): Whether to allow interactive prompts for OUTPUT_DIR.
-                            Defaults to True.
-        gen_output_dir (bool): Whether to generate the output directory.
+        script_name (str): Name of the executing script, used for logger setup and output directory naming.
+        interactive (bool): If True, allows user prompts for directory selection where applicable.
+        gen_output_dir (bool): If True, creates and includes an OUTPUT_DIR path in the configuration.
+        output_dir_dated (bool): If True, includes the current date in the generated OUTPUT_DIR name.
+        auto_date (bool): If True, retrieves the current date automatically using `get_date`.
+        fixed_date (str, optional): Manually specified date in 'YYYYMM' format, used if auto_date is False.
+
     Returns:
-        dict: A configuration dictionary with various constants and paths.
+        dict: A configuration dictionary with the following keys:
+            - 'logger': Configured logger instance.
+            - 'DATE': Current processing date in 'YYYYMM' format.
+            - 'YEAR': The year extracted from DATE.
+            - 'DATE_PREV': Previous month date in 'YYYYMM' format.
+            - 'REPO_DIR': Root directory of the repository.
+            - 'DATAFEED_DIR': Directory containing raw and processed data feeds.
+            - 'SRI_DATA_DIR': Directory containing SRI-specific Excel files.
+            - 'EXCEL_BOOKS_DIR': Base directory for Excel files.
+            - 'ALADDIN_DATA_DIR': Directory for Aladdin-related datasets.
+            - 'NASDAQ_DATA_DIR': Directory for Nasdaq datasets.
+            - 'SUSTAINALYTICS_DATA_DIR': Directory for Sustainalytics data.
+            - 'paths': Dictionary of specific input file paths relevant to the current date.
+            - 'OUTPUT_DIR': Output directory path if generated, else None.
+            - 'ESG_METRICS_MAP_DIR': Directory for ESG metric mappings.
     """
     # Initialize logger for the current script
     logger = set_up_log(script_name)
