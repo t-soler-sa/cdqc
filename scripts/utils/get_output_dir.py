@@ -3,7 +3,12 @@ from pathlib import Path
 
 
 def get_output_dir(
-    script_name: str, sri_data_dir: Path, interactive: bool = True
+    script_name: str,
+    sri_data_dir: Path,
+    interactive: bool = True,
+    dated: bool = False,
+    dir_date: str = None,
+    logger: object = None,
 ) -> Path:
     """
     Determines and creates the output directory based on the script name.
@@ -32,8 +37,12 @@ def get_output_dir(
         dir_name = mapping[script_lower]
     elif not interactive:
         # In non-interactive mode, default to script_lower
+        logger.info(
+            f"Non-interactive mode enabled. Using script name {script_lower} as directory name."
+        )
         dir_name = script_lower
     else:
+        logger.info("Interactive mode enabled. Prompting for directory name.")
         # Ask user if it's okay to create a new directory
         user_response = (
             input(
@@ -45,6 +54,7 @@ def get_output_dir(
 
         if user_response in ("y", "yes"):
             dir_name = script_lower
+            logger.info(f"Creating new directory: {dir_name}")
         else:
             options = [
                 "pre_ovr_analysis",
@@ -61,17 +71,42 @@ def get_output_dir(
                 selection = input("Enter a number (1-5): ").strip()
                 if selection in [str(i) for i in range(1, len(options) + 1)]:
                     dir_name = options[int(selection) - 1]
+                    logger.info(f"Creating new directory: {dir_name}")
                     break
                 else:
                     print("Invalid selection. Please enter a number between 1 and 5.")
 
-    output_dir = sri_data_dir / dir_name
+    if dated:
+        logger.info("Dated mode enabled. Using dir_date for directory name.")
+        from datetime import datetime
+
+        # check dir_date is in YYYYMM format
+        if dir_date is None:
+            logger.error("dir_date must be provided when dated is True.")
+            raise ValueError("dir_date must be provided when dated is True.")
+        elif not isinstance(dir_date, str) or len(dir_date) != 6:
+            logger.error("dir_date must be a string in YYYYMM format.")
+            raise ValueError("dir_date must be a string in YYYYMM format.")
+        try:
+            datetime.strptime(dir_date, "%Y%m")
+            year_month = dir_date
+            year = dir_date[:4]
+            output_dir = sri_data_dir / dir_name / f"{year}" / f"{year_month}"
+            logger.info(f"Creating dated directory: {output_dir}")
+        except ValueError:
+            logger.error("dir_date must be a string in YYYYMM format.")
+            raise ValueError("dir_date must be a string in YYYYMM format.")
+
+    else:
+        output_dir = sri_data_dir / dir_name
+        logger.info(f"Creating non-dated directory: {output_dir}")
 
     try:
+        logger.info(f"Creating directory {output_dir} if it does not exists")
         output_dir.mkdir(parents=True, exist_ok=True)
     except Exception as e:
-        print(f"Error creating directory {output_dir}: {e}")
+        logger.error(f"Error creating directory {output_dir}: {e}")
         raise
 
-    print(f"Output directory for script {script_name} is set to: {output_dir}")
+    logger.info(f"Output directory for script {script_name} is set to: {output_dir}")
     return output_dir
