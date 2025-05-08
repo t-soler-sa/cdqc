@@ -43,6 +43,7 @@ from scripts.utils.clarity_data_quality_control_functions import (
     clean_portfolio_and_exclusion_list,
     clean_exclusion_list_with_ovr,
     clean_empty_exclusion_rows,
+    process_data_by_strategy,
 )
 
 from scripts.utils.zombie_killer import main as zombie_killer
@@ -397,67 +398,18 @@ def main(simple: bool = False):
     dlt_inc_benchmarks = clean_inclusion_list(dlt_inc_benchmarks)
 
     # 6. GET STRATEGIES DFS
-    str_dfs_dict = {}
 
-    # Iterate over strategies to build DataFrames
-    for strategy in delta_test_cols:
-        rows = []
-
-        for _, row in delta_brs.iterrows():
-            if strategy in row["exclusion_list_brs"]:
-                rows.append(
-                    {
-                        "aladdin_id": row["aladdin_id"],
-                        "permid": row["permid"],
-                        "issuer_name": row["issuer_name"],
-                        strategy: row[strategy],
-                        "affected_portfolio_str": row["affected_portfolio_str"],
-                    }
-                )
-
-        str_dfs_dict[strategy] = pd.DataFrame(rows)
-
-    # Prepare lookups for efficient mapping
-    permid_to_df1 = df_1.set_index("permid").copy()  # df_1 already has permid as index
-    aladdin_to_brs = brs_carteras_issuerlevel.set_index("aladdin_id")
-
-    for strategy_name, df in str_dfs_dict.items():
-        # Initialize additional columns
-        df[f"{strategy_name}_old"] = None
-        df[f"{strategy_name}_brs"] = None
-        df[f"{strategy_name}_ovr"] = None
-
-        for i, row in df.iterrows():
-            permid = row["permid"]
-            aladdin_id = row["aladdin_id"]
-
-            # Lookup from df_1
-            if permid in permid_to_df1.index:
-                df.at[i, f"{strategy_name}_old"] = permid_to_df1.at[
-                    permid, strategy_name
-                ]
-
-            # Lookup from brs_carteras_issuerlevel
-            if aladdin_id in aladdin_to_brs.index:
-                df.at[i, f"{strategy_name}_brs"] = aladdin_to_brs.at[
-                    aladdin_id, strategy_name
-                ]
-
-            # Lookup from overrides
-            match = overrides.loc[
-                (overrides["permid"] == permid)
-                & (overrides["ovr_target"] == strategy_name),
-                "ovr_value",
-            ]
-            if not match.empty:
-                df.at[i, f"{strategy_name}_ovr"] = match.values[0]
-
-        # Move "affected_portfolio_str" to the end
-        cols = [col for col in df.columns if col != "affected_portfolio_str"] + [
-            "affected_portfolio_str"
-        ]
-        df = df[cols]
-        str_dfs_dict[strategy_name] = df
+    str_dfs_dict = process_data_by_strategy(
+        input_df=delta_brs,
+        strategies_list=delta_test_cols,  # Replace with your actual list of strategies
+        input_df_exclusion_col="exclusion_list_brs",  # Or your relevant column name
+        df1_lookup_source=df_1,  # Replace with your df_1 DataFrame
+        brs_lookup_source=brs_carteras_issuerlevel,  # Replace with your brs_carteras_issuerlevel DataFrame
+        overrides_df=overrides,  # Replace with your overrides DataFrame
+        # Optional arguments can be omitted if the default values are suitable for your use caseç
+        affected_portfolio_col_name="affected_portfolio_str",
+        logger=logger,
+    )
 
     # 7. PREP BEFORE SAVING INTO EXCEL
 

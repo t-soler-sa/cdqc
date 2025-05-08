@@ -437,3 +437,184 @@ def clean_empty_exclusion_rows(df, target_col: str = "exclusion_list_brs"):
 
     # Drop rows where exclusion_list_brs is empty after cleaning
     return df[df[target_col].apply(lambda x: isinstance(x, list) and len(x) > 0)]
+
+
+import pandas as pd
+from typing import Dict
+
+import pandas as pd
+import numpy as np  # For np.nan if preferred over None
+
+
+def process_data_by_strategy(
+    input_df: pd.DataFrame,
+    strategies_list: list,
+    input_df_exclusion_col: str,
+    df1_lookup_source: pd.DataFrame,
+    brs_lookup_source: pd.DataFrame,
+    overrides_df: pd.DataFrame,
+    affected_portfolio_col_name: str = "affected_portfolio_str",
+    # --- Key column names in the strategy-specific DataFrames being built ---
+    strategy_df_permid_col: str = "permid",  # Must be in initial_cols_to_extract
+    strategy_df_aladdin_id_col: str = "aladdin_id",  # Must be in initial_cols_to_extract
+    # --- Key column names in the source lookup DataFrames ---
+    df1_source_key_col: str = "permid",
+    brs_source_key_col: str = "aladdin_id",
+    # --- Column names for override logic ---
+    overrides_permid_col: str = "permid",
+    overrides_target_col: str = "ovr_target",
+    overrides_value_col: str = "ovr_value",
+    logger: logging.Logger = None,
+) -> dict:
+    """
+    Processes an input DataFrame to create separate, enriched DataFrames for each specified strategy.
+
+    Args:
+        input_df: The main DataFrame to process (e.g., delta_brs).
+        strategies_list: A list of strategy names to iterate over (e.g., delta_test_cols).
+        input_df_exclusion_col: Column name in input_df that contains lists/iterables
+                                 of strategies for exclusion or inclusion criteria.
+        extra_cols_to_extract: List of column names to extract from input_df for the
+                                 initial strategy DataFrames.
+        df1_lookup_source: DataFrame for the first lookup (e.g., df_1). Expected to have
+                           columns like "(strategy_name)_old".
+        brs_lookup_source: DataFrame for the BRS lookup (e.g., brs_carteras_issuerlevel).
+                           Expected to have columns like "(strategy_name)_brs".
+        overrides_df: DataFrame for override lookups.
+        affected_portfolio_col_name: Name of the column to move to the end of each
+                                     strategy DataFrame.
+        strategy_df_permid_col: Column name in strategy DataFrames used as key for
+                                df1_lookup_source and overrides_df.
+        strategy_df_aladdin_id_col: Column name in strategy DataFrames used as key for
+                                    brs_lookup_source.
+        df1_source_key_col: Key column name in df1_lookup_source to index on.
+        brs_source_key_col: Key column name in brs_lookup_source to index on.
+        overrides_permid_col: PermID column name in overrides_df.
+        overrides_target_col: Target strategy column name in overrides_df.
+        overrides_value_col: Value column name in overrides_df for the override.
+
+    Returns:
+        A dictionary where keys are strategy names and values are the processed
+        DataFrames for each strategy.
+    """
+
+    initial_cols_to_extract = [
+        "aladdin_id",
+        "permid",
+        "issuer_name",
+        affected_portfolio_col_name,
+    ]
+
+    str_dfs_dict = {}
+
+    # Part 1: Iterate over strategies to build initial DataFrames from input_df
+    logger.info(
+        "Starting to process to generate exclusion & inclusion analysis at the strategies."
+    )
+    for strategy_name_key in strategies_list:
+        rows = []
+        for _, row in input_df.iterrows():
+            # Check if the exclusion column exists and its value is iterable and contains the strategy
+            if (
+                input_df_exclusion_col in row
+                and hasattr(row[input_df_exclusion_col], "__contains__")
+                and strategy_name_key in row[input_df_exclusion_col]
+            ):
+                extracted_row_data = {
+                    col: row[col] for col in initial_cols_to_extract if col in row
+                }
+                rows.append(extracted_row_data)
+
+        if rows:
+            str_dfs_dict[strategy_name_key] = pd.DataFrame(rows)
+        else:
+            # Create an empty DataFrame with the specified columns if no rows match
+            str_dfs_dict[strategy_name_key] = pd.DataFrame(
+                columns=initial_cols_to_extract
+            )
+
+    # Part 2: Prepare lookup DataFrames (create indexed copies to avoid modifying originals)
+    # Using .copy() ensures that original DataFrames passed to function are not modified.
+    logger.info("Preparing lookup DataFrames.")
+    permid_to_df1_lookup = df1_lookup_source.copy().set_index(
+        df1_source_key_col, drop=False
+    )
+    aladdin_to_brs_lookup = brs_lookup_source.copy().set_index(
+        brs_source_key_col, drop=False
+    )
+
+    # Part 3: Iterate through the newly created strategy DataFrames to add/enrich columns
+    logger.info("Adding new columns to strategy DataFrames.")
+    for strategy_name, temp_df in str_dfs_dict.items():
+        if temp_df.empty:
+            continue  # Skip processing for strategies with no initial data
+
+        # Define derived column names based on the strategy_name (as seen in snippet)
+        # These columns will be added to the temp_df for the current strategy
+        target_col_old = f"({strategy_name})_old"
+        target_col_brs = f"({strategy_name})_brs"
+        target_col_ovr = f"({strategy_name})_ovr"
+
+        # Initialize these new columns in the strategy-specific DataFrame
+        # Using pd.NA for better compatibility with pandas dtypes, allows nullable integers etc.
+        temp_df[target_col_old] = pd.NA
+        temp_df[target_col_brs] = pd.NA
+        temp_df[target_col_ovr] = pd.NA
+
+        # Ensure columns are of object type if they might hold mixed types or pd.NA
+        # This is important if the source data for these columns is not uniformly numeric.
+        temp_df = temp_df.astype(
+            {target_col_old: object, target_col_brs: object, target_col_ovr: object}
+        )
+
+        for i, df_row in temp_df.iterrows():
+            permid_val = df_row.get(strategy_df_permid_col)
+            aladdin_id_val = df_row.get(strategy_df_aladdin_id_col)
+
+            # Lookup from df1_lookup_source
+            if pd.notna(permid_val) and permid_val in permid_to_df1_lookup.index:
+                # The source column name in df1_lookup_source is assumed to match target_col_old
+                if target_col_old in permid_to_df1_lookup.columns:
+                    temp_df.at[i, target_col_old] = permid_to_df1_lookup.at[
+                        permid_val, target_col_old
+                    ]
+
+            # Lookup from brs_lookup_source
+            if (
+                pd.notna(aladdin_id_val)
+                and aladdin_id_val in aladdin_to_brs_lookup.index
+            ):
+                # The source column name in brs_lookup_source is assumed to match target_col_brs
+                if target_col_brs in aladdin_to_brs_lookup.columns:
+                    temp_df.at[i, target_col_brs] = aladdin_to_brs_lookup.at[
+                        aladdin_id_val, target_col_brs
+                    ]
+
+            # Lookup from overrides_df
+            if pd.notna(permid_val):
+                # Filter overrides_df for matching permid and strategy_name
+                match_override = overrides_df[
+                    (overrides_df[overrides_permid_col] == permid_val)
+                    & (overrides_df[overrides_target_col] == strategy_name)
+                ]
+                if not match_override.empty:
+                    # Assign the first matched override value
+                    temp_df.at[i, target_col_ovr] = match_override[
+                        overrides_value_col
+                    ].values[0]
+
+        # Part 4: Move the 'affected_portfolio_col_name' to the end of the DataFrame
+        logger.info("Moving affected portfolio column to the end of the DataFrame.")
+        if affected_portfolio_col_name in temp_df.columns:
+            cols = [
+                col for col in temp_df.columns if col != affected_portfolio_col_name
+            ] + [affected_portfolio_col_name]
+            temp_df = temp_df[cols]
+
+        str_dfs_dict[strategy_name] = (
+            temp_df  # Update dictionary with the processed DataFrame
+        )
+    logger.info(
+        "Finished processing to generate exclusion & inclusion analysis at the strategies."
+    )
+    return str_dfs_dict
