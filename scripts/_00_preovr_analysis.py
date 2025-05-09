@@ -38,12 +38,12 @@ from scripts.utils.clarity_data_quality_control_functions import (
     filter_non_empty_lists,
     filter_rows_with_common_elements,
     reorder_columns,
-    remove_matching_rows,
     clean_inclusion_list,
     clean_portfolio_and_exclusion_list,
     clean_exclusion_list_with_ovr,
     clean_empty_exclusion_rows,
     process_data_by_strategy,
+    filter_and_drop,
 )
 
 from scripts.utils.zombie_killer import main as zombie_killer
@@ -127,6 +127,12 @@ def parse_arguments():
         action="store_true",
         help="Do you want to generate simplified version of the pre-ovr analysis?",
     )
+    # add argument so user can choose if it wants zombie analysis
+    parser.add_argument(
+        "--zombie",
+        action="store_true",
+        help="Do you want to generate zombie analysis?",
+    )
 
     # add positional argument date to not work together with the get_date script
     parser.add_argument("--date", nargs="?", help="Date in YYYYMM format (positional)")
@@ -135,8 +141,10 @@ def parse_arguments():
 
 
 # Define main function
-def main(simple: bool = False):
+def main(simple: bool = False, zombie: bool = False):
     logger.info(f"Starting pre-ovr-analysis for {DATE}.")
+    logger.info(f"IT WILL RUN STRATEGY LEVEL ANALYSIS: {simple}")
+    logger.info(f"IT WILL RUN ZOMBIE ANALYSIS: {zombie}")
     # 1.    LOAD DATA
 
     # 1.1.  aladdin /brs data / perimeters
@@ -238,7 +246,7 @@ def main(simple: bool = False):
     # 2.3.  PREPARE DATA BRS LEVEL FOR PORTFOLIOS
     logger.info("Preparing dataframes for BRS Portfolio level")
     (
-        brs_df,
+        brs_df_portfolios,
         clarity_df,
         in_clarity_but_not_in_brs,
         in_brs_but_not_in_clarity,
@@ -299,222 +307,393 @@ def main(simple: bool = False):
         sys.exit()
 
     # COMPARE DATA
-    logger.info("comparing clarity dataframes")
-    delta_clarity = compare_dataframes(df_1, df_2)
-    delta_clarity = check_new_exclusions(df_1, df_2, delta_clarity)
-    delta_clarity = check_new_inclusions(df_1, df_2, delta_clarity)
-    delta_clarity = finalize_delta(delta_clarity)
-    logger.info("checking impact compared to BRS portfolio data")
-    delta_brs = compare_dataframes(brs_df, clarity_df)
-    delta_brs = check_new_exclusions(brs_df, clarity_df, delta_brs, suffix_level="_brs")
-    delta_brs = check_new_inclusions(brs_df, clarity_df, delta_brs, suffix_level="_brs")
-    delta_brs = finalize_delta(delta_brs, target_index="aladdin_id")
-    logger.info("checking impact compared to BRS benchmarks data")
-    delta_benchmarks = compare_dataframes(brs_df_benchmarks, clarity_df_benchmarks)
-    delta_benchmarks = check_new_exclusions(
-        brs_df_benchmarks, clarity_df_benchmarks, delta_benchmarks, suffix_level="_brs"
-    )
-    delta_benchmarks = check_new_inclusions(
-        brs_df_benchmarks, clarity_df_benchmarks, delta_benchmarks, suffix_level="_brs"
-    )
-    delta_benchmarks = finalize_delta(delta_benchmarks, target_index="aladdin_id")
 
-    # 3.   Get Zombie Analysis
-    logger.info("Getting zombie analysis df")
-    zombie_df = zombie_killer(
-        clarity_df=df_2_copy,
-        brs_carteras=brs_carteras,
-        brs_benchmarks=brs_benchmarks,
-        crosreference=crosreference,
-    )
+    logger.info("Start comparing the dataframes and building their deltas")
+    compare_data_config = [
+        {
+            "delta_name": "delta_clarity",
+            "compared_dfs": [df_1, df_2],
+            "suffix": "",
+            "target_index": "permid",
+        },
+        {
+            "delta_name": "delta_brs_ptf",
+            "compared_dfs": [brs_df_portfolios, clarity_df],
+            "suffix": "_brs",
+            "target_index": "aladdin_id",
+        },
+        {
+            "delta_name": "delta_brs_bmks",
+            "compared_dfs": [brs_df_benchmarks, clarity_df_benchmarks],
+            "suffix": "_brs",
+            "target_index": "aladdin_id",
+        },
+    ]
 
-    # 4.    PREP DELTAS BEFORE SAVING
-    # PREP DELTAS BEFORE SAVING
-    logger.info("Preparing deltas before saving")
-    # use crossreference to add permid to delta_brs
-    delta_brs = delta_brs.merge(
-        crosreference[["aladdin_id", "permid"]], on="aladdin_id", how="left"
-    )
-    delta_benchmarks = delta_benchmarks.merge(
-        crosreference[["aladdin_id", "permid"]], on="aladdin_id", how="left"
-    )
-    # drop isin from deltas
-    delta_clarity.drop(columns=["isin"], inplace=True)
-    delta_brs.drop(columns=["isin"], inplace=True)
-    delta_benchmarks.drop(columns=["isin"], inplace=True)
-    # add new column to delta_brs with ovr_dict value using aladdin_id
-    delta_brs["ovr_list"] = delta_brs["aladdin_id"].map(ovr_dict)
-    delta_clarity["ovr_list"] = delta_clarity["aladdin_id"].map(ovr_dict)
-    delta_benchmarks["ovr_list"] = delta_benchmarks["aladdin_id"].map(ovr_dict)
-    # let's add portfolio info to the delta_df
-    delta_clarity = add_portfolio_benchmark_info_to_df(portfolio_dict, delta_clarity)
-    delta_brs = add_portfolio_benchmark_info_to_df(portfolio_dict, delta_brs)
-    delta_benchmarks = add_portfolio_benchmark_info_to_df(
-        portfolio_dict, delta_benchmarks
-    )
-    # let's add benchmark info to the delta_df
-    delta_clarity = add_portfolio_benchmark_info_to_df(
-        benchmark_dict, delta_clarity, "affected_benchmark_str"
-    )
-    delta_brs = add_portfolio_benchmark_info_to_df(
-        benchmark_dict, delta_brs, "affected_benchmark_str"
-    )
-    delta_benchmarks = add_portfolio_benchmark_info_to_df(
-        benchmark_dict, delta_benchmarks, "affected_benchmark_str"
+    deltas_df_dict = {}
+
+    for config in compare_data_config:
+        delta_name = f"{config["delta_name"]}"
+        logger.info(f"Initiating delta {delta_name}")
+        old_df, new_df = config["compared_dfs"]
+        deltas_df_dict[delta_name] = compare_dataframes(old_df, new_df)
+
+    for config in compare_data_config:
+        delta_name = f"{config["delta_name"]}"
+        logger.info(f"Checking new exclusions and inclusions for {delta_name}")
+        old_df, new_df = config["compared_dfs"]
+        suffix = config["suffix"]
+        target_idx = config["target_index"]
+        delta_df = deltas_df_dict[delta_name]
+        delta_df = check_new_exclusions(old_df, new_df, delta_df, suffix_level=suffix)
+        delta_df = check_new_inclusions(old_df, new_df, delta_df, suffix_level=suffix)
+        delta_df = finalize_delta(delta_df, target_index=target_idx)
+        deltas_df_dict[delta_name] = delta_df
+
+    # logg to check dfs columns before prepping
+    logger.info(
+        "\n\n\n============DFS SHAPE AND COLUMNS BEFORE PREPRING=============\n\n\n"
     )
 
-    # 5. FILTER & SORT DATA & GET RELEVANT DATA FOR THE ANALYSIS
-    # let's use filter_non_empty_lists to remove rows with empty lists in affected_portfolio_str
-    delta_brs = filter_non_empty_lists(delta_brs, "affected_portfolio_str")
-    # let's use filter_non_empty_lists to remove rows with empty lists in affected_portfolio_str
-    delta_benchmarks = filter_non_empty_lists(
-        delta_benchmarks, "affected_benchmark_str"
+    for df_name, df in deltas_df_dict.items():
+        logger.info(
+            f"{df_name}'s index:{df.index.name} & columns:\n {df.columns.tolist()}\n\n"
+        )
+
+    # Define parameters for each filtering operation
+    logger.info(
+        "Let us now filter and drop inclusion and exclusion columnas and created dfs of ex/in both for ptf & bmk"
     )
+    filter_configs = [
+        (
+            "delta_brs_ptf",
+            "new_exclusion",
+            ["new_exclusion", "new_inclusion", "inclusion_list_brs"],
+            "delta_ex_ptf",
+        ),
+        (
+            "delta_brs_ptf",
+            "new_inclusion",
+            ["new_exclusion", "new_inclusion", "exclusion_list_brs"],
+            "delta_in_ptf",
+        ),
+        (
+            "delta_brs_bmks",
+            "new_exclusion",
+            ["new_exclusion", "new_inclusion", "inclusion_list_brs"],
+            "delta_ex_bmk",
+        ),
+        (
+            "delta_brs_bmks",
+            "new_inclusion",
+            ["new_exclusion", "new_inclusion", "exclusion_list_brs"],
+            "delta_in_bmk",
+        ),
+    ]
 
-    # ADD TEST FOR INCLUSIONS
-    logger.info("creating copy of dataset for inclusion analysis")
-    dlt_inc_brs = delta_brs.copy()
-    dlt_inc_benchmarks = delta_benchmarks.copy()
+    # Use dictionary unpacking to store the results if needed
+    filter_dfs_dict = {}
 
-    # pass filter_rows_with_common_elements for columns exclusion_list_brs and affected_portfolio_str
-    delta_brs = filter_rows_with_common_elements(
-        delta_brs, "exclusion_list_brs", "affected_portfolio_str"
-    )
-    delta_benchmarks = filter_rows_with_common_elements(
-        delta_benchmarks, "exclusion_list_brs", "affected_benchmark_str"
-    )
+    for df_key, filter_col, drop_cols, result_key in filter_configs:
+        df = deltas_df_dict[df_key]
+        logger.info(f"Filtering and dropping column in df {df_key}")
+        filter_dfs_dict[result_key] = filter_and_drop(df, filter_col, drop_cols, logger)
 
-    # let's reset df1 index to permid
-    df_1.reset_index(inplace=True)
-    df_1["permid"] = df_1["permid"].astype(str)
+    # Unpacking filtered dataframes after filtering and dropping columns
+    delta_ex_ptf = filter_dfs_dict["delta_ex_ptf"].copy()
+    delta_in_ptf = filter_dfs_dict["delta_in_ptf"].copy()
+    delta_ex_bmk = filter_dfs_dict["delta_ex_bmk"].copy()
+    delta_in_bmk = filter_dfs_dict["delta_in_bmk"].copy()
 
-    # reoder columns for inclusions
-    dlt_inc_brs = reorder_columns(dlt_inc_brs, id_name_issuers_cols, delta_test_cols)
-    dlt_inc_benchmarks = reorder_columns(
-        dlt_inc_benchmarks, id_name_issuers_cols, delta_test_cols
-    )
+    delta_clarity = deltas_df_dict["delta_clarity"].copy()
 
-    dlt_inc_brs = clean_inclusion_list(dlt_inc_brs)
-    dlt_inc_benchmarks = clean_inclusion_list(dlt_inc_benchmarks)
+    # Free space by delting the dicts and config list you are done with
+    del filter_dfs_dict, deltas_df_dict, compare_data_config, filter_configs
+
+    # 3.    PREP DELTAS BEFORE SAVING
+    logger.info("\nPreparing filtered deltas before saving")
+    # Define prepping configuration
+    prep_config = [
+        {
+            "prep_config_name": "clarity_deltas",
+            "dfs_dict": {"delta_clarity": delta_clarity},
+            "missing_permid": False,
+            # let's define paramst for the battery of functions
+            "brs_data": False,
+        },  # clarity deltas
+        {
+            "prep_config_name": "portfolio_deltas",
+            "dfs_dict": {"exclusion_df": delta_ex_ptf, "inclusion_df": delta_in_ptf},
+            "missing_permid": True,
+            # let's define paramst for the battery of functions
+            "brs_data": True,
+            "main_parameter": "affected_portfolio_str",
+        },  # portfolio deltas
+        {
+            "prep_config_name": "benchmark_deltas",
+            "dfs_dict": {"exclusion_df": delta_ex_bmk, "inclusion_df": delta_in_bmk},
+            "missing_permid": True,
+            # let's define paramst for the battery of functions
+            "brs_data": True,
+            "main_parameter": "affected_benchmark_str",
+        },  # benchmark deltas
+    ]
+
+    final_dfs_dict = {}  # to persist all cleaned dataframes
+
+    for config in prep_config:
+        # apply to all deltdf_name, a dfs_dicts
+        for df_name, df in config["dfs_dict"].items():
+            logger.info("Let's standrise indeces")
+            if "index" in df.columns:
+                df.drop(columns="index", inplace=True)
+                logger.info(
+                    f"Dropped column 'index' from {config["prep_config_name"]}'s {df_name}."
+                )
+
+            # Reset index if it's aladdin_id or permid
+            if df.index.name in ["aladdin_id", "permid"]:
+                df.reset_index(inplace=True)
+                logger.info(
+                    f"Reset index from {config["prep_config_name"]}'s {df_name}."
+                )
+            # let's drop isin from all dfs_dict
+            logger.info(f"Dropping isin column from {df_name}")
+            df.drop(columns=["isin"], inplace=True, errors="ignore")
+            # add new column 'ovr_dict' value using aladdin_id
+            logger.info(
+                f"Adding column 'ovr_list' to {config["prep_config_name"]}'s {df_name}"
+            )
+            try:
+                df["ovr_list"] = df["aladdin_id"].map(ovr_dict)
+                config["dfs_dict"][df_name] = df
+            except KeyError as e:
+                logger.error(
+                    f"Missing expected colummn in {config["prep_config_name"]}'s {df_name}:\n{e}"
+                )
+                logger.info(
+                    f"Colummn in {config["prep_config_name"]}'s {df_name}:\n{df.columns.tolist()}"
+                )
+
+        if config["missing_permid"]:
+            for df_name, df in config["dfs_dict"].items():
+                logger.info(
+                    f"Merging to add permid to {config["prep_config_name"]}'s {df_name}"
+                )
+                df = df.merge(
+                    crosreference[["aladdin_id", "permid"]], on="aladdin_id", how="left"
+                )
+                config["dfs_dict"][df_name] = df
+
+        # let's apply the following functions:
+        for df_name, df in config["dfs_dict"].items():
+            # 1. add_portfolio_benchmark_info_to_df (without string "affected_benchmark_str")
+            logger.info(
+                f" Adding affect portfolio info to {config["prep_config_name"]}'s {df_name}"
+            )
+            df = add_portfolio_benchmark_info_to_df(portfolio_dict, df)
+            # 2. add_portfolio_benchmark_info_to_df (with string "affected_benchmark_str")
+            logger.info(
+                f" Adding affect benchmark info to {config["prep_config_name"]}'s {df_name}"
+            )
+            df = add_portfolio_benchmark_info_to_df(
+                benchmark_dict, df, "affected_benchmark_str"
+            )
+            # 3. filter_non_empty_lists
+            config["dfs_dict"][df_name] = df
+
+        if config["brs_data"]:
+            for df_name, df in config["dfs_dict"].items():
+                logger.info(
+                    f"Filtering non empty lists for {config["prep_config_name"]}'s {df_name}"
+                )
+                df = filter_non_empty_lists(df, config["main_parameter"])
+                # 4. filter_rows_with_common_elements
+                logger.info(
+                    f"Filtering rows with common elements for {config["prep_config_name"]}'s {df_name}"
+                )
+                if df_name == "exclusion_df":
+                    df = filter_rows_with_common_elements(
+                        df, "exclusion_list_brs", config["main_parameter"]
+                    )
+                    config["dfs_dict"][df_name] = df
+                    logger.info(
+                        f"{df_name} has {config["dfs_dict"][df_name].shape[0]} rows"
+                    )
+                else:
+                    df = filter_rows_with_common_elements(
+                        df, "inclusion_list_brs", config["main_parameter"]
+                    )
+                    config["dfs_dict"][df_name] = df
+                    logger.info(
+                        f"{df_name} has {config["dfs_dict"][df_name].shape[0]} rows"
+                    )
+
+        # 5. reoder columns for all the deltas
+        for df_name, df in config["dfs_dict"].items():
+            logger.info(
+                f"Reordering columns for {config["prep_config_name"]}'s {df_name}"
+            )
+            df = reorder_columns(df, id_name_issuers_cols, delta_test_cols)
+            if df_name == "exclusion_df":
+                # Clean exclusion data
+                logger.info("Cleaning exclusion list for overrides OK")
+                df = clean_exclusion_list_with_ovr(df)
+            elif df_name == "inclusion_df":
+                # Clean inclusion data
+                logger.info("Cleaning inclusion lists with overrides")
+                df = clean_inclusion_list(df)
+            else:
+                logger.info(
+                    f"Not filereing exclusion/inclusion for df {config["prep_config_name"]}'s {df_name}"
+                )
+                logger.info("Cleaning exclusion list for overrides OK")
+                df = clean_exclusion_list_with_ovr(
+                    df, exclusion_list_col="exclusion_list"
+                )
+            config["dfs_dict"][df_name] = df
+
+        if config["prep_config_name"] == "portfolio_deltas":
+            for df_name, df in config["dfs_dict"].items():
+                if df_name == "exclusion_df":
+                    # apply clean portfolio and exclusion list
+                    # cleant portfolio and exclusion list
+                    logger.info("Cleaning portfolio and exclusion lists")
+                    df = df.apply(clean_portfolio_and_exclusion_list, axis=1)
+                    config["dfs_dict"][df_name] = df
+
+        for df_name, df in config["dfs_dict"].items():
+            # remove rows with empyt exclusion lists
+            logger.info("Cleaning empty exclusion lists")
+            if df_name == "delta_clarity":
+                df = clean_empty_exclusion_rows(df, target_col="exclusion_list")
+            if df_name == "exclusion_df":
+                df = clean_empty_exclusion_rows(df)
+            config["dfs_dict"][df_name] = df
+
+        # persist cleaned DataFrames
+        for df_name, df in config["dfs_dict"].items():
+            final_key = f"{config['prep_config_name']}_{df_name}"
+            final_dfs_dict[final_key] = df
+
+    # MINOR DEBUG LOGGING - REMOVE LATER
+    logger.info("\n\n==========SHOW dataframes AFTER cleaning==========\n\n")
+    for df_name, df in final_dfs_dict.items():
+
+        # logg columns for all the dfs
+        logger.info(f"Columns in {df_name}:\n {df.columns.tolist()}\n")
+        # Log if df has index and if it does the index name
+        if df.index.name:
+            logger.info(f"Index name for {df_name}: {df.index.name}")
+            logger.info(f"Columns in {df_name}:\n {df.columns.tolist()}\n")
+        else:
+            logger.info(f"Columns in {df_name}:\n {df.columns.tolist()}\n")
+
+    # Unpack cleaned DataFrames using original names
+    delta_clarity = final_dfs_dict["clarity_deltas_delta_clarity"].copy()
+    delta_ex_ptf = final_dfs_dict["portfolio_deltas_exclusion_df"].copy()
+    delta_in_ptf = final_dfs_dict["portfolio_deltas_inclusion_df"].copy()
+    delta_ex_bmk = final_dfs_dict["benchmark_deltas_exclusion_df"].copy()
+    delta_in_bmk = final_dfs_dict["benchmark_deltas_inclusion_df"].copy()
+
+    # Free up memory: delete prep structure and final dict
+    del prep_config, final_dfs_dict
 
     # 6. GET STRATEGIES DFS
+    if simple:
+        logger.info("Getting strategies dfs")
 
-    str_dfs_dict = process_data_by_strategy(
-        input_df=delta_brs,
-        strategies_list=delta_test_cols,  # Replace with your actual list of strategies
-        input_df_exclusion_col="exclusion_list_brs",  # Or your relevant column name
-        df1_lookup_source=df_1,  # Replace with your df_1 DataFrame
-        brs_lookup_source=brs_carteras_issuerlevel,  # Replace with your brs_carteras_issuerlevel DataFrame
-        overrides_df=overrides,  # Replace with your overrides DataFrame
-        # Optional arguments can be omitted if the default values are suitable for your use caseç
-        affected_portfolio_col_name="affected_portfolio_str",
-        logger=logger,
-    )
+        configurations = [
+            {
+                "description": "Exclusion BRS Exclusion Analysis at the Portfolio level",
+                "var_name": "str_dfs_ex_ptf",
+                "input_df": delta_ex_ptf,
+                "exclusion_col": "exclusion_list_brs",
+                "affected_col": "affected_portfolio_str",
+                "brs_source": brs_df_portfolios,
+            },
+            {
+                "description": "Exclusion BRS Exclusion Analysis at the Benchmark level",
+                "var_name": "str_dfs_ex_bmk",
+                "input_df": delta_ex_bmk,
+                "exclusion_col": "exclusion_list_brs",
+                "affected_col": "affected_benchmark_str",
+                "brs_source": brs_df_benchmarks,
+            },
+            {
+                "description": "Exclusion BRS Inclusion Analysis at the Portfolio level",
+                "var_name": "str_dfs_in_ptf",
+                "input_df": delta_in_ptf,
+                "exclusion_col": "inclusion_list_brs",
+                "affected_col": "affected_portfolio_str",
+                "brs_source": brs_df_portfolios,
+            },
+            {
+                "description": "Exclusion BRS Inclusion Analysis at the Benchmark level",
+                "var_name": "str_dfs_in_bmk",
+                "input_df": delta_in_bmk,
+                "exclusion_col": "inclusion_list_brs",
+                "affected_col": "affected_benchmark_str",
+                "brs_source": brs_df_benchmarks,
+            },
+        ]
 
-    # 7. PREP BEFORE SAVING INTO EXCEL
+        results_str_level_dfs = {}
 
-    # 7.1. sort columns of deltas df before saving
-    # set id_name_issuers_cols first and exclude delta_test_cols
-    delta_brs = reorder_columns(delta_brs, id_name_issuers_cols, delta_test_cols)
-    delta_clarity = reorder_columns(
-        delta_clarity, id_name_issuers_cols, delta_test_cols
-    )
-    delta_benchmarks = reorder_columns(
-        delta_benchmarks, id_name_issuers_cols, delta_test_cols
-    )
-    # set id_name_issuers_cols first
-    new_issuers_clarity = reorder_columns(
-        new_issuers_clarity, id_name_issuers_cols, id_name_cols
-    )
-    out_issuer_clarity = reorder_columns(
-        out_issuer_clarity, id_name_issuers_cols, id_name_cols
-    )
+        for config in configurations:
+            logger.info(f"Getting {config['description']}")
+            results_str_level_dfs[config["var_name"]] = process_data_by_strategy(
+                input_delta_df=config["input_df"],
+                strategies_list=delta_test_cols,
+                input_df_exclusion_col=config["exclusion_col"],
+                df1_lookup_source=df_1,
+                df2_lookup_source=df_2,
+                brs_lookup_source=config["brs_source"],
+                overrides_df=overrides,
+                affected_portfolio_col_name=config["affected_col"],
+                logger=logger,
+            )
+    else:
+        pass
 
-    # remove matchin rows from strategies dataframes
-    for df_name, df in str_dfs_dict.items():
-        str_dfs_dict[df_name] = remove_matching_rows(df)
-
-    # columns to remove from delta_brs, delta_benchmarks before saving
-    exclusion_cols_to_remove = ["new_inclusion", "inclusion_list_brs"]
-    # columns to remove from dlt_inc_brs and dlt_inc_benchmarks before saving
-    inclusion_cols_to_remove = ["new_exclusion", "exclusion_list_brs"]
-
-    # Filter and clean exclusion data
-    delta_brs = delta_brs.drop(columns=exclusion_cols_to_remove)
-    delta_brs = delta_brs[delta_brs["new_exclusion"] == True]
-
-    delta_benchmarks = delta_benchmarks.drop(columns=exclusion_cols_to_remove)
-    delta_benchmarks = delta_benchmarks[delta_benchmarks["new_exclusion"] == True]
-
-    # Filter and clean inclusion data
-    dlt_inc_brs = dlt_inc_brs.drop(columns=inclusion_cols_to_remove)
-    dlt_inc_brs = dlt_inc_brs[dlt_inc_brs["new_inclusion"] == True]
-
-    dlt_inc_benchmarks = dlt_inc_benchmarks.drop(columns=inclusion_cols_to_remove)
-    dlt_inc_benchmarks = dlt_inc_benchmarks[dlt_inc_benchmarks["new_inclusion"] == True]
-
-    # Clean delta_clarity
-    delta_clarity.drop(columns=["new_inclusion", "inclusion_list"], inplace=True)
-    delta_clarity = delta_clarity[delta_clarity["new_exclusion"] == True]
-
-    # Final cleanup: drop 'new_exclusion' and 'new_inclusion' if present
-    for df in [
-        delta_brs,
-        delta_benchmarks,
-        dlt_inc_brs,
-        dlt_inc_benchmarks,
-        delta_clarity,
-    ]:
-        for col in ["new_exclusion", "new_inclusion"]:
-            if col in df.columns:
-                df.drop(columns=col, inplace=True)
-
-    # clean exclusion list if there is overrides ok
-    logger.info("Cleaning exclusion lists with overrides")
-    delta_brs = clean_exclusion_list_with_ovr(delta_brs)
-    delta_benchmarks = clean_exclusion_list_with_ovr(delta_benchmarks)
-    delta_clarity = clean_exclusion_list_with_ovr(
-        delta_clarity, exclusion_list_col="exclusion_list"
-    )
-
-    # cleant portfolio and exclusion list
-    logger.info("Cleaning portfolio and exclusion lists")
-    delta_brs = delta_brs.apply(clean_portfolio_and_exclusion_list, axis=1)
-
-    # remove rows with empyt exclusion lists
-    logger.info("Cleaning empty exclusion lists")
-    delta_brs = clean_empty_exclusion_rows(delta_brs)
-    delta_benchmarks = clean_empty_exclusion_rows(delta_benchmarks)
-    delta_clarity = clean_empty_exclusion_rows(
-        delta_clarity, target_col="exclusion_list"
-    )
+    # 7.   Get Zombie Analysis
+    if zombie:
+        logger.info("Getting zombie analysis df")
+        zombie_df = zombie_killer(
+            clarity_df=df_2_copy,
+            brs_carteras=brs_carteras,
+            brs_benchmarks=brs_benchmarks,
+            crosreference=crosreference,
+        )
+    else:
+        pass
 
     # 8 SAVE INTO EXCEL
 
     # create dict of df and df name
     dfs_dict = {
-        "zombie_analysis": zombie_df,
-        "excl_carteras": delta_brs,
-        "excl_benchmarks": delta_benchmarks,
+        "excl_carteras": delta_ex_ptf,
+        "excl_benchmarks": delta_ex_bmk,
         "excl_clarity": delta_clarity,
-        "incl_carteras": dlt_inc_brs,
-        "incl_benchmarks": dlt_inc_benchmarks,
-        "new_issuers_clarity": new_issuers_clarity,
-        "out_issuer_clarity": out_issuer_clarity,
+        "incl_carteras": delta_in_ptf,
+        "incl_benchmarks": delta_in_bmk,
     }
-
-    # add to dfs_dict the str_dfs_dict
-    dfs_dict.update(str_dfs_dict)
+    if zombie:
+        dfs_dict["zombie_analysis"] = zombie_df
+    else:
+        pass
 
     # save to excel
     if simple:
-        # save simplified version and regular version
-        save_excel(
-            str_dfs_dict, OUTPUT_DIR, file_name=f"{DATE}dfs_pre_ovr_analysis_str_level"
-        )
+        for key, df in results_str_level_dfs.items():
+            save_excel(df, OUTPUT_DIR, file_name=f"{DATE}{key}")
+            logger.info(f"Saved {key} to {OUTPUT_DIR}/{DATE}{key}.xlsx")
         save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}dfs_pre_ovr_analysis")
+        logger.info(f"Saved dfs_dict to {OUTPUT_DIR}/{DATE}dfs_pre_ovr_analysis.xlsx")
+
     else:
         save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}dfs_pre_ovr_analysis")
+        logger.info(f"Saved dfs_dict to {OUTPUT_DIR}/{DATE}dfs_pre_ovr_analysis.xlsx")
 
 
 if __name__ == "__main__":
