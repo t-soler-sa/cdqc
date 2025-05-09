@@ -19,6 +19,7 @@ fi
 # Assign the first parameter to the DATE variable
 DATE=$1
 SIMPLE_FLAG=""
+ZOMBIE_FLAG=""
 SCRIPTS=(
     "utils/remove_duplicates.py"
     "utils/update_ovr_db_active_col.py"
@@ -37,6 +38,10 @@ for arg in "$@"; do
         only_preovr)
             echo "Only pre override analysis will be generated"
             SCRIPTS=("_00_preovr_analysis.py")
+            ;;
+        zombie)
+            echo "Zombie parameter provided! Zombie analysis will be generated"
+            ZOMBIE_FLAG="--zombie"
             ;;
         *)
             echo "Unknown argument: $arg"
@@ -59,18 +64,20 @@ for script in "${SCRIPTS[@]}"; do
     script_module=${script_module//\//.} # Convert file path to module path
     
     echo "Running $script_module"
+
+    CMD=(python -m "scripts.${script_module}")
     
-    # Check if the script is the pre override analysis script
-    if [[ $script_module=="_00_preovr_analysis" && -n $SIMPLE_FLAG ]]; then
-        echo "Running pre override analysis with simple flag enabled -> $SIMPLE_FLAG"
-        python -m "scripts.${script_module}" "$SIMPLE_FLAG" --date "$DATE"
-        
-    else
-        python -m "scripts.${script_module}" --date "$DATE"
+    # If it's the pre override script, add flags
+    if [[ $script_module == "_00_preovr_analysis" ]]; then
+        [[ -n $SIMPLE_FLAG ]] && CMD+=("$SIMPLE_FLAG")
+        [[ -n $ZOMBIE_FLAG ]] && CMD+=("$ZOMBIE_FLAG")
     fi
+
+    CMD+=(--date "$DATE")
     
-    
-    # Check if the script executed successfully
+    echo "Command: ${CMD[*]}"
+    "${CMD[@]}"
+
     if [ $? -ne 0 ]; then
         echo "Error occurred while running $script_module"
         exit 1
