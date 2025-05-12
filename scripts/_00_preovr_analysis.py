@@ -352,12 +352,28 @@ def main(simple: bool = False, zombie: bool = False):
 
     # logg to check dfs columns before prepping
     logger.info(
-        "\n\n\n============DFS SHAPE AND COLUMNS BEFORE PREPRING=============\n\n\n"
+        "\n\n\n============DFs' INDEX, SHAPE AND COLUMNS BEFORE FILTERING & DROPPING=============\n\n\n"
     )
 
     for df_name, df in deltas_df_dict.items():
         logger.info(
-            f"{df_name}'s index:{df.index.name} & columns:\n {df.columns.tolist()}\n\n"
+            f"{df_name}'s index:{df.index.name}, \n{df_name}'s shape {df.shape[0]} & \ncolumns:\n {df.columns.tolist()}\n\n"
+        )
+        # Temporarily override pandas display options
+        with pd.option_context(
+            "display.max_rows",
+            None,
+            "display.max_columns",
+            None,
+            "display.width",
+            None,
+            "display.max_colwidth",
+            None,
+        ):
+            logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
+
+        logger.info(
+            "\n\n\n=========================================================\n\n\n"
         )
 
     # Define parameters for each filtering operation
@@ -366,27 +382,27 @@ def main(simple: bool = False, zombie: bool = False):
     )
     filter_configs = [
         (
-            "delta_brs_ptf",
-            "new_exclusion",
-            ["new_exclusion", "new_inclusion", "inclusion_list_brs"],
-            "delta_ex_ptf",
+            "delta_brs_ptf",  # df_key
+            "new_exclusion",  # filtering col
+            ["new_inclusion", "inclusion_list_brs"],  # columns to drop before filtering
+            "delta_ex_ptf",  # result_key
         ),
         (
             "delta_brs_ptf",
             "new_inclusion",
-            ["new_exclusion", "new_inclusion", "exclusion_list_brs"],
+            ["new_exclusion", "exclusion_list_brs"],
             "delta_in_ptf",
         ),
         (
             "delta_brs_bmks",
             "new_exclusion",
-            ["new_exclusion", "new_inclusion", "inclusion_list_brs"],
+            ["new_inclusion", "inclusion_list_brs"],
             "delta_ex_bmk",
         ),
         (
             "delta_brs_bmks",
             "new_inclusion",
-            ["new_exclusion", "new_inclusion", "exclusion_list_brs"],
+            ["new_exclusion", "exclusion_list_brs"],
             "delta_in_bmk",
         ),
     ]
@@ -395,7 +411,7 @@ def main(simple: bool = False, zombie: bool = False):
     filter_dfs_dict = {}
 
     for df_key, filter_col, drop_cols, result_key in filter_configs:
-        df = deltas_df_dict[df_key]
+        df = deltas_df_dict[df_key].copy()  # input_df
         logger.info(f"Filtering and dropping column in df {df_key}")
         filter_dfs_dict[result_key] = filter_and_drop(df, filter_col, drop_cols, logger)
 
@@ -405,7 +421,62 @@ def main(simple: bool = False, zombie: bool = False):
     delta_ex_bmk = filter_dfs_dict["delta_ex_bmk"].copy()
     delta_in_bmk = filter_dfs_dict["delta_in_bmk"].copy()
 
-    delta_clarity = deltas_df_dict["delta_clarity"].copy()
+    delta_clarity = deltas_df_dict["delta_clarity"].copy()  # Let's save delta dfs
+    delta_brs_ptf = deltas_df_dict["delta_brs_ptf"].copy()  # Let's save delta dfs
+    delta_brs_bmks = deltas_df_dict["delta_brs_bmks"].copy()  # Let's save delta dfs
+
+    # logg to check dfs columns before prepping
+    logger.info(
+        "\n\n\n============DFS SHAPE, COLUMNS, & HEAD  AFTER FILTERING & DROPPING=============\n\n\n"
+    )
+
+    for df_name, df in deltas_df_dict.items():
+        logger.info(
+            f"{df_name}'s index:{df.index.name}, \n{df_name}'s shape {df.shape[0]} & \ncolumns:\n {df.columns.tolist()}\n\n"
+        )
+        # Temporarily override pandas display options
+        with pd.option_context(
+            "display.max_rows",
+            None,
+            "display.max_columns",
+            None,
+            "display.width",
+            None,
+            "display.max_colwidth",
+            None,
+        ):
+            logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
+
+        logger.info(
+            "\n\n\n=========================================================\n\n\n"
+        )
+        # logg to check dfs columns before prepping
+    logger.info(
+        "\n\n\n============DFS AT STRATEGY LEVEL's SHAPE, COLUMNS, & HEAD =============\n\n\n"
+    )
+
+    for df_name, df in filter_dfs_dict.items():
+        save_excel(df, OUTPUT_DIR, file_name=f"{DATE}{df_name}_UNFILTERED")
+        logger.info(f"Saved {df_name} to {OUTPUT_DIR}/{DATE}{df_name}_UNFILTERED.xlsx")
+        logger.info(
+            f"{df_name}'s index:{df.index.name}, \n{df_name}'s shape {df.shape[0]} & \ncolumns:\n {df.columns.tolist()}\n\n"
+        )
+        # Temporarily override pandas display options
+        with pd.option_context(
+            "display.max_rows",
+            None,
+            "display.max_columns",
+            None,
+            "display.width",
+            None,
+            "display.max_colwidth",
+            None,
+        ):
+            logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
+
+        logger.info(
+            "\n\n\n=========================================================\n\n\n"
+        )
 
     # Free space by delting the dicts and config list you are done with
     del filter_dfs_dict, deltas_df_dict, compare_data_config, filter_configs
@@ -577,7 +648,7 @@ def main(simple: bool = False, zombie: bool = False):
             final_dfs_dict[final_key] = df
 
     # MINOR DEBUG LOGGING - REMOVE LATER
-    logger.info("\n\n==========SHOW dataframes AFTER cleaning==========\n\n")
+    logger.info("\n\n========== SHOW dataframes AFTER cleaning ==========\n\n")
     for df_name, df in final_dfs_dict.items():
 
         # logg columns for all the dfs
@@ -588,6 +659,8 @@ def main(simple: bool = False, zombie: bool = False):
             logger.info(f"Columns in {df_name}:\n {df.columns.tolist()}\n")
         else:
             logger.info(f"Columns in {df_name}:\n {df.columns.tolist()}\n")
+
+    logger.info("\n\n================================================\n\n")
 
     # Unpack cleaned DataFrames using original names
     delta_clarity = final_dfs_dict["clarity_deltas_delta_clarity"].copy()
@@ -686,7 +759,7 @@ def main(simple: bool = False, zombie: bool = False):
     # save to excel
     if simple:
         for key, df in results_str_level_dfs.items():
-            save_excel(df, OUTPUT_DIR, file_name=f"{DATE}{key}")
+            save_excel(df, OUTPUT_DIR, file_name=f"{DATE}_{key}")
             logger.info(f"Saved {key} to {OUTPUT_DIR}/{DATE}{key}.xlsx")
         save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}dfs_pre_ovr_analysis")
         logger.info(f"Saved dfs_dict to {OUTPUT_DIR}/{DATE}dfs_pre_ovr_analysis.xlsx")

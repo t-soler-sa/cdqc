@@ -227,7 +227,7 @@ def get_issuer_level_df(df: pd.DataFrame, idx_name: str) -> pd.DataFrame:
     NaN, None, or strings like "nan", "NaN", "none", or empty strings.
 
     Args:
-        df (pd.DataFrame): Input dataframe.
+        df (p   d.DataFrame): Input dataframe.
         idx_name (str): Column name used for duplicate removal and NaN filtering.
 
     Returns:
@@ -270,26 +270,35 @@ def filter_and_drop(
     try:
         logger.info(f"Filtering DataFrame using column: '{filter_col}'")
 
-        if filter_col not in df.columns:
-            raise KeyError(f"Filter column '{filter_col}' not found in DataFrame.")
-
-        filtered = df[df[filter_col]]
-        logger.info(f"Filtered {len(filtered)} rows where '{filter_col}' is True")
-
+        # We drop first unnecesary columns
         missing_cols = [col for col in drop_cols if col not in df.columns]
         if missing_cols:
             logger.info(f"columns {missing_cols} not in df")
             drop_cols = [col for col in drop_cols if col in df.columns]
             logger.info(f"Dropping instead columns: {drop_cols}")
         else:
+            drop_cols = drop_cols
             logger.info(f"Dropping columns: {drop_cols}")
 
-        filtered_df = filtered.drop(columns=drop_cols)
+        logger.info(f"Dropping: {drop_cols}")
+        filtered_df = df.drop(columns=drop_cols).copy()
 
+        # We then filter only the relevant rows based on the filtering column
+        if filter_col not in df.columns:
+            raise KeyError(f"Filter column '{filter_col}' not found in DataFrame.")
+        else:
+            logger.info(f"Filtering DataFrame where '{filter_col}' is True")
+            filtered_df = filtered_df[filtered_df[filter_col]].copy()
+            logger.info(
+                f"Filtered {len(filtered_df)} rows where '{filter_col}' is True"
+            )
+            logger.info(f"Let's drop filter_col column: {filter_col}")
+            filtered_df.drop(columns=[filter_col], inplace=True)
         return filtered_df
 
     except Exception as e:
-        logger.error(f"Error in filter_and_drop: {e}")
+        e.add_note("Error in filter_and_drop")
+        logger.error(f"{e}")
         raise
 
 
