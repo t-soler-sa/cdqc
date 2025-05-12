@@ -71,89 +71,6 @@ def prepare_dataframes(
     )
 
 
-def compare_dataframes(
-    df1: pd.DataFrame, df2: pd.DataFrame, test_col: List[str] = delta_test_cols
-) -> pd.DataFrame:
-    """Compare DataFrames and create a delta DataFrame."""
-    delta = df2.copy()
-    for col in test_col:
-        if col in df1.columns and col in df2.columns:
-            logger.info(f"Comparing column: {col}")
-            # Create a mask for differences between the two DataFrames
-            diff_mask = df1[col] != df2[col]
-            # Update the delta DataFrame with the differences
-            delta.loc[~diff_mask, col] = np.nan
-    return delta
-
-
-def get_exclusion_list(
-    row: pd.Series,
-    df1: pd.DataFrame,
-    test_col: List[str] = delta_test_cols,
-) -> List[str]:
-    """Get list of columns that changed to EXCLUDED."""
-    return [
-        col
-        for col in test_col
-        if row[col] == "EXCLUDED" and df1.loc[row.name, col] != "EXCLUDED"
-    ]
-
-
-def get_inclusion_list(
-    row: pd.Series,
-    df1: pd.DataFrame,
-    test_col: List[str] = delta_test_cols,
-) -> List[str]:
-    """Get list of columns that changed from EXCLUDED to any other value."""
-    return [
-        col
-        for col in test_col
-        if row[col] != "EXCLUDED" and df1.loc[row.name, col] == "EXCLUDED"
-    ]
-
-
-def check_new_exclusions(
-    df1: pd.DataFrame,
-    df2: pd.DataFrame,
-    delta: pd.DataFrame,
-    test_col: List[str] = delta_test_cols,
-    suffix_level: str = "",
-) -> pd.DataFrame:
-    """Check for new exclusions and update the delta DataFrame."""
-    delta["new_exclusion"] = False
-    for col in test_col:
-        if col in df1.columns and col in df2.columns:
-            logger.info(f"Checking for new exclusions in column: {col}")
-            mask = (df1[col] != "EXCLUDED") & (df2[col] == "EXCLUDED")
-            delta.loc[mask, "new_exclusion"] = True
-            logger.info(f"Number of new exclusions in {col}: {mask.sum()}")
-    delta[f"exclusion_list{suffix_level}"] = delta.apply(
-        lambda row: get_exclusion_list(row, df1, test_col), axis=1
-    )
-    return delta
-
-
-def check_new_inclusions(
-    df1: pd.DataFrame,
-    df2: pd.DataFrame,
-    delta: pd.DataFrame,
-    test_col: List[str] = delta_test_cols,
-    suffix_level: str = "",
-) -> pd.DataFrame:
-    """Check for new inclusions and update the delta DataFrame."""
-    delta["new_inclusion"] = False
-    for col in test_col:
-        if col in df1.columns and col in df2.columns:
-            logger.info(f"Checking for new inclusions in column: {col}")
-            mask = (df1[col] == "EXCLUDED") & (df2[col] != "EXCLUDED")
-            delta.loc[mask, "new_inclusion"] = True
-            logger.info(f"Number of new inclusions in {col}: {mask.sum()}")
-    delta[f"inclusion_list{suffix_level}"] = delta.apply(
-        lambda row: get_inclusion_list(row, df1, test_col), axis=1
-    )
-    return delta
-
-
 def finalize_delta(
     delta: pd.DataFrame,
     test_col: List[str] = delta_test_cols,
@@ -167,6 +84,171 @@ def finalize_delta(
     delta.loc[:, target_index] = delta[target_index].astype(str)
     logger.info(f"Final delta shape: {delta.shape}")
     return delta
+
+
+def filter_and_drop(
+    df: pd.DataFrame, filter_col: str, drop_cols: List[str]
+) -> pd.DataFrame:
+    """
+    Filters a DataFrame based on a boolean column and drops specified columns.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame to filter and modify.
+    - filter_col (str): The name of the boolean column to filter on.
+    - drop_cols (List[str]): A list of column names to drop.
+    - logger: Logger object for logging messages.
+
+    Returns:
+    - pd.DataFrame: A filtered and reduced copy of the original DataFrame.
+
+    Raises:
+    - KeyError: If specified columns are not found in the DataFrame.
+    - Exception: For any other unexpected errors during execution.
+    """
+    try:
+        logger.info(f"Filtering DataFrame using column: '{filter_col}'")
+
+        # We drop first unnecesary columns
+        missing_cols = [col for col in drop_cols if col not in df.columns]
+        if missing_cols:
+            logger.info(f"columns {missing_cols} not in df")
+            drop_cols = [col for col in drop_cols if col in df.columns]
+            logger.info(f"Dropping instead columns: {drop_cols}")
+        else:
+            drop_cols = drop_cols
+            logger.info(f"Dropping columns: {drop_cols}")
+
+        logger.info(f"Dropping: {drop_cols}")
+        filtered_df = df.drop(columns=drop_cols).copy()
+
+        # We then filter only the relevant rows based on the filtering column
+        if filter_col not in df.columns:
+            raise KeyError(f"Filter column '{filter_col}' not found in DataFrame.")
+        else:
+            logger.info(f"Filtering DataFrame where '{filter_col}' is True")
+            filtered_df = filtered_df[filtered_df[filter_col]].copy()
+            logger.info(
+                f"Filtered {len(filtered_df)} rows where '{filter_col}' is True"
+            )
+            logger.info(f"Let's drop filter_col column: {filter_col}")
+            filtered_df.drop(columns=[filter_col], inplace=True)
+        return filtered_df
+
+    except Exception as e:
+        e.add_note("Error in filter_and_drop")
+        logger.error(f"{e}")
+        raise
+
+
+def generate_delta(
+    df1: pd.DataFrame,  # old_df that you get from othe function prepare_dataframes
+    df2: pd.DataFrame,  # new_df that you get from othe function prepare_dataframes
+    test_col: List[str] = delta_test_cols,
+    suffix_level: str = "",  # eg. "_brs"
+    condition_list: List[str] = [],  # either ["EXCLUDED"] or ["OK", "FLAG"]
+    delta_analysis_str: str = "",  # either "exclusion" or "inclusion"
+    get_inc_excl: bool = True,  # if False, skip step 2 and return after comparison
+    delta_name_str: str = "delta",  # name of the delta DataFrame
+    target_index: str = "permid",  # index to be used for the DataFrame
+    filter_col: str = "",
+    drop_cols: List[str] = [],  # columns to be dropped after filtering
+) -> pd.DataFrame:
+    """
+    Generate a delta DataFrame highlighting differences between two input DataFrames,
+    with an optional analysis to detect value transitions based on specified conditions.
+
+    This function performs the following:
+    1. Compares specified columns between `df1` and `df2` and marks changes in a copy of `df2` by replacing
+       unchanged values with NaN.
+    2. Optionally, identifies changes where values in `df1` did not meet a specified condition and
+       changed in `df2` to meet the condition, marking these rows and logging the count of such transitions.
+    3. Appends a column listing all columns where such condition-based transitions occurred.
+
+    Parameters:
+        df1 (pd.DataFrame): The original DataFrame used as a baseline for comparison. These dataframes are the output of the function prepare_dataframes()
+        df2 (pd.DataFrame): The new DataFrame to compare against the baseline. These dataframes are the output of the function prepare_dataframes()
+        test_col (List[str]): List of column names to be tested for changes and condition transitions.
+        suffix_level (str): A suffix appended to the generated list column name for disambiguation (e.g., "_brs").
+        condition_list (List[str]): List of string values representing the target conditions
+            (e.g., ["EXCLUDED"]) used to detect value transitions.
+        delta_analysis_str (str): String label used to name the analysis, such as "exclusion" or "inclusion".
+        get_inc_excl (bool): Flag indicating whether to perform condition-based transition analysis.
+            If False, only the delta comparison is returned.
+
+    Returns:
+        pd.DataFrame: A modified copy of `df2` where unchanged values are replaced with NaN in specified columns,
+        and additional columns indicate new condition-based changes and lists of columns where such changes occurred.
+
+    Raises:
+        ValueError: If `get_inc_excl` is True but `condition_list` is empty.
+    """
+
+    # Step 1: Compare DataFrames and create a delta DataFrame
+    delta = df2.copy()
+    for col in test_col:
+        if col in df1.columns and col in df2.columns:
+            logger.info(f"Comparing column: {col}")
+            # Create a mask for differences between the two DataFrames
+            diff_mask = df1[col] != df2[col]
+            # Update the delta DataFrame with the differences
+            delta.loc[~diff_mask, col] = np.nan
+
+    # Return early if inclusion/exclusion analysis is not required
+    if not get_inc_excl:
+        return finalize_delta(delta, test_col, target_index)
+
+    # Step 2: Check for condition-based changes (e.g., new exclusions/inclusions)
+    logger.info(f"Generating {delta_analysis_str} for {delta_name_str} analysis.")
+    if not condition_list and get_inc_excl:
+        logger.warning(
+            "Condition list is empty. No exclusions will be checked. Provide a list with at least an item like 'EXCLUSION'."
+        )
+        raise ValueError("Condition list is empty.")
+
+    delta_column_name = f"new_{delta_analysis_str}"
+    logger.info(f"Checking for new {delta_analysis_str}")
+    delta[delta_column_name] = False
+
+    # Normalize condition list once
+    normalized_conditions = [cond.strip().upper() for cond in condition_list]
+
+    for col in test_col:
+        if col in df1.columns and col in df2.columns:
+            logger.info(f"Checking for new {delta_analysis_str} in column: {col}")
+            mask = (
+                ~df1[col]
+                .astype(str)
+                .str.strip()
+                .str.upper()
+                .isin(normalized_conditions)
+            ) & (
+                df2[col].astype(str).str.strip().str.upper().isin(normalized_conditions)
+            )
+            delta.loc[mask, delta_column_name] = True
+            logger.info(f"Number of new {delta_analysis_str}s in {col}: {mask.sum()}")
+
+    # Auxiliary function to get the list of changed columns
+    def get_delta_list(row: pd.Series) -> List[str]:
+        """Get list of columns that changed to value in the condition_list."""
+        return [
+            col
+            for col in test_col
+            if col in df1.columns
+            and col in df2.columns
+            and str(df2.loc[row.name, col]).strip().upper() in normalized_conditions
+            and str(df1.loc[row.name, col]).strip().upper() not in normalized_conditions
+        ]
+
+    delta[f"{delta_analysis_str}_list{suffix_level}"] = delta.apply(
+        lambda row: get_delta_list(row), axis=1
+    )
+
+    final_df = finalize_delta(delta, test_col, target_index)
+
+    # Step 3: Filter and drop specified columns
+    logger.info(f"Filtering DataFrame using column: '{filter_col}'")
+    filtered_delta = filter_and_drop(final_df, filter_col, drop_cols)
+    return filtered_delta
 
 
 def create_override_dict(
@@ -246,60 +328,6 @@ def get_issuer_level_df(df: pd.DataFrame, idx_name: str) -> pd.DataFrame:
     )
 
     return df_cleaned[valid_rows]
-
-
-def filter_and_drop(
-    df: pd.DataFrame, filter_col: str, drop_cols: List[str], logger
-) -> pd.DataFrame:
-    """
-    Filters a DataFrame based on a boolean column and drops specified columns.
-
-    Parameters:
-    - df (pd.DataFrame): The DataFrame to filter and modify.
-    - filter_col (str): The name of the boolean column to filter on.
-    - drop_cols (List[str]): A list of column names to drop.
-    - logger: Logger object for logging messages.
-
-    Returns:
-    - pd.DataFrame: A filtered and reduced copy of the original DataFrame.
-
-    Raises:
-    - KeyError: If specified columns are not found in the DataFrame.
-    - Exception: For any other unexpected errors during execution.
-    """
-    try:
-        logger.info(f"Filtering DataFrame using column: '{filter_col}'")
-
-        # We drop first unnecesary columns
-        missing_cols = [col for col in drop_cols if col not in df.columns]
-        if missing_cols:
-            logger.info(f"columns {missing_cols} not in df")
-            drop_cols = [col for col in drop_cols if col in df.columns]
-            logger.info(f"Dropping instead columns: {drop_cols}")
-        else:
-            drop_cols = drop_cols
-            logger.info(f"Dropping columns: {drop_cols}")
-
-        logger.info(f"Dropping: {drop_cols}")
-        filtered_df = df.drop(columns=drop_cols).copy()
-
-        # We then filter only the relevant rows based on the filtering column
-        if filter_col not in df.columns:
-            raise KeyError(f"Filter column '{filter_col}' not found in DataFrame.")
-        else:
-            logger.info(f"Filtering DataFrame where '{filter_col}' is True")
-            filtered_df = filtered_df[filtered_df[filter_col]].copy()
-            logger.info(
-                f"Filtered {len(filtered_df)} rows where '{filter_col}' is True"
-            )
-            logger.info(f"Let's drop filter_col column: {filter_col}")
-            filtered_df.drop(columns=[filter_col], inplace=True)
-        return filtered_df
-
-    except Exception as e:
-        e.add_note("Error in filter_and_drop")
-        logger.error(f"{e}")
-        raise
 
 
 def filter_non_empty_lists(df: pd.DataFrame, column: str) -> pd.DataFrame:

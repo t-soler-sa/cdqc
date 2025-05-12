@@ -28,9 +28,7 @@ from scripts.utils.dataloaders import (
 
 from scripts.utils.clarity_data_quality_control_functions import (
     prepare_dataframes,
-    compare_dataframes,
-    check_new_exclusions,
-    check_new_inclusions,
+    generate_delta,
     finalize_delta,
     create_override_dict,
     add_portfolio_benchmark_info_to_df,
@@ -306,131 +304,139 @@ def main(simple: bool = False, zombie: bool = False):
         )
         sys.exit()
 
-    # COMPARE DATA
-
+    # 2.3. GENERATE DELTAS
     logger.info("Start comparing the dataframes and building their deltas")
-    compare_data_config = [
+    delta_process_config = [
         {
             "delta_name": "delta_clarity",
             "compared_dfs": [df_1, df_2],
             "suffix": "",
             "target_index": "permid",
+            "get_incl_excl": False,
         },
         {
             "delta_name": "delta_brs_ptf",
             "compared_dfs": [brs_df_portfolios, clarity_df],
             "suffix": "_brs",
             "target_index": "aladdin_id",
+            "get_incl_excl": True,
+            "excl_incl_dict": {
+                "excl_dict": {
+                    "df_name": "delta_ex_ptf",
+                    "delta_analysis_str": "exclusion",
+                    "condition_list": ["EXCLUDED"],
+                    "filtering_col": "new_exclusion",
+                    "dropping_cols": ["new_inclusion", "inclusion_list_brs"],
+                },
+                "incl_dict": {
+                    "df_name": "delta_in_ptf",
+                    "delta_analysis_str": "inclusion",
+                    "condition_list": ["OK", "FLAG"],
+                    "filtering_col": "new_inclusion",
+                    "dropping_cols": ["new_exclusion", "exclusion_list_brs"],
+                },
+            },
         },
         {
             "delta_name": "delta_brs_bmks",
             "compared_dfs": [brs_df_benchmarks, clarity_df_benchmarks],
             "suffix": "_brs",
             "target_index": "aladdin_id",
+            "get_incl_excl": True,
+            "excl_incl_dict": {
+                "excl_dict": {
+                    "df_name": "delta_ex_bmk",
+                    "delta_analysis_str": "exclusion",
+                    "condition_list": ["EXCLUDED"],
+                    "filtering_col": "new_exclusion",
+                    "dropping_cols": ["new_inclusion", "inclusion_list_brs"],
+                },
+                "incl_dict": {
+                    "df_name": "delta_in_bmk",
+                    "delta_analysis_str": "inclusion",
+                    "condition_list": ["OK", "FLAG"],
+                    "filtering_col": "new_inclusion",
+                    "dropping_cols": ["new_exclusion", "exclusion_list_brs"],
+                },
+            },
         },
     ]
 
     deltas_df_dict = {}
 
-    for config in compare_data_config:
+    for config in delta_process_config:
         delta_name = f"{config["delta_name"]}"
-        logger.info(f"Initiating delta {delta_name}")
         old_df, new_df = config["compared_dfs"]
-        deltas_df_dict[delta_name] = compare_dataframes(old_df, new_df)
-
-    for config in compare_data_config:
-        delta_name = f"{config["delta_name"]}"
-        logger.info(f"Checking new exclusions and inclusions for {delta_name}")
-        old_df, new_df = config["compared_dfs"]
-        suffix = config["suffix"]
         target_idx = config["target_index"]
-        delta_df = deltas_df_dict[delta_name]
-        delta_df = check_new_exclusions(old_df, new_df, delta_df, suffix_level=suffix)
-        delta_df = check_new_inclusions(old_df, new_df, delta_df, suffix_level=suffix)
-        delta_df = finalize_delta(delta_df, target_index=target_idx)
-        deltas_df_dict[delta_name] = delta_df
+        suffix = config["suffix"]
+        get_incl_excl_flag = config["get_incl_excl"]
+        logger.info(f"Initiating delta generation process for {delta_name}")
+        if get_incl_excl_flag:
+            excl_df_name = config["excl_incl_dict"]["excl_dict"]["df_name"]
+            excl_delta_analysis_str = config["excl_incl_dict"]["excl_dict"][
+                "delta_analysis_str"
+            ]
+            excl_condition_list = config["excl_incl_dict"]["excl_dict"][
+                "condition_list"
+            ]
+            excl_filtering_col = config["excl_incl_dict"]["excl_dict"]["filtering_col"]
+            excl_dropping_cols = config["excl_incl_dict"]["excl_dict"]["dropping_cols"]
+            logger.info(f"Generating delta for {excl_df_name}")
+            deltas_df_dict[excl_df_name] = generate_delta(
+                old_df,
+                new_df,
+                suffix_level=suffix,
+                delta_analysis_str=excl_delta_analysis_str,
+                condition_list=excl_condition_list,
+                get_inc_excl=True,
+                delta_name_str=delta_name,
+                target_index=target_idx,
+                filter_col=excl_filtering_col,
+                drop_cols=excl_dropping_cols,
+            )
+
+            incl_df_name = config["excl_incl_dict"]["incl_dict"]["df_name"]
+            incl_delta_analysis_str = config["excl_incl_dict"]["incl_dict"][
+                "delta_analysis_str"
+            ]
+            incl_condition_list = config["excl_incl_dict"]["incl_dict"][
+                "condition_list"
+            ]
+            incl_filtering_col = config["excl_incl_dict"]["incl_dict"]["filtering_col"]
+            incl_dropping_cols = config["excl_incl_dict"]["incl_dict"]["dropping_cols"]
+            logger.info(f"Generating delta for {excl_df_name}")
+            deltas_df_dict[incl_df_name] = generate_delta(
+                old_df,
+                new_df,
+                suffix_level=suffix,
+                delta_analysis_str=incl_delta_analysis_str,
+                condition_list=incl_condition_list,
+                get_inc_excl=True,
+                delta_name_str=delta_name,
+                target_index=target_idx,
+                filter_col=incl_filtering_col,
+                drop_cols=incl_dropping_cols,
+            )
+
+        else:
+            # Generate delta without inclusion/exclusion analysis
+            deltas_df_dict[delta_name] = generate_delta(
+                old_df,
+                new_df,
+                suffix_level=suffix,
+                delta_name_str=delta_name,
+                target_index=target_idx,
+                get_inc_excl=False,
+            )
 
     # logg to check dfs columns before prepping
     logger.info(
-        "\n\n\n============DFs' INDEX, SHAPE AND COLUMNS BEFORE FILTERING & DROPPING=============\n\n\n"
+        "\n\n\n============DELTAS' SHAPE, COLUMNS, & HEAD  AFTER FILTERING & DROPPING=============\n\n\n"
     )
 
     for df_name, df in deltas_df_dict.items():
-        logger.info(
-            f"{df_name}'s index:{df.index.name}, \n{df_name}'s shape {df.shape[0]} & \ncolumns:\n {df.columns.tolist()}\n\n"
-        )
-        # Temporarily override pandas display options
-        with pd.option_context(
-            "display.max_rows",
-            None,
-            "display.max_columns",
-            None,
-            "display.width",
-            None,
-            "display.max_colwidth",
-            None,
-        ):
-            logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
-
-        logger.info(
-            "\n\n\n=========================================================\n\n\n"
-        )
-
-    # Define parameters for each filtering operation
-    logger.info(
-        "Let us now filter and drop inclusion and exclusion columnas and created dfs of ex/in both for ptf & bmk"
-    )
-    filter_configs = [
-        (
-            "delta_brs_ptf",  # df_key
-            "new_exclusion",  # filtering col
-            ["new_inclusion", "inclusion_list_brs"],  # columns to drop before filtering
-            "delta_ex_ptf",  # result_key
-        ),
-        (
-            "delta_brs_ptf",
-            "new_inclusion",
-            ["new_exclusion", "exclusion_list_brs"],
-            "delta_in_ptf",
-        ),
-        (
-            "delta_brs_bmks",
-            "new_exclusion",
-            ["new_inclusion", "inclusion_list_brs"],
-            "delta_ex_bmk",
-        ),
-        (
-            "delta_brs_bmks",
-            "new_inclusion",
-            ["new_exclusion", "exclusion_list_brs"],
-            "delta_in_bmk",
-        ),
-    ]
-
-    # Use dictionary unpacking to store the results if needed
-    filter_dfs_dict = {}
-
-    for df_key, filter_col, drop_cols, result_key in filter_configs:
-        df = deltas_df_dict[df_key].copy()  # input_df
-        logger.info(f"Filtering and dropping column in df {df_key}")
-        filter_dfs_dict[result_key] = filter_and_drop(df, filter_col, drop_cols, logger)
-
-    # Unpacking filtered dataframes after filtering and dropping columns
-    delta_ex_ptf = filter_dfs_dict["delta_ex_ptf"].copy()
-    delta_in_ptf = filter_dfs_dict["delta_in_ptf"].copy()
-    delta_ex_bmk = filter_dfs_dict["delta_ex_bmk"].copy()
-    delta_in_bmk = filter_dfs_dict["delta_in_bmk"].copy()
-
-    delta_clarity = deltas_df_dict["delta_clarity"].copy()  # Let's save delta dfs
-    delta_brs_ptf = deltas_df_dict["delta_brs_ptf"].copy()  # Let's save delta dfs
-    delta_brs_bmks = deltas_df_dict["delta_brs_bmks"].copy()  # Let's save delta dfs
-
-    # logg to check dfs columns before prepping
-    logger.info(
-        "\n\n\n============DFS SHAPE, COLUMNS, & HEAD  AFTER FILTERING & DROPPING=============\n\n\n"
-    )
-
-    for df_name, df in deltas_df_dict.items():
+        temp_pathout = OUTPUT_DIR / f"{DATE}_{df_name}_UNFILTERED.xlsx"
+        df.to_excel(temp_pathout, index=False)
         logger.info(
             f"{df_name}'s index:{df.index.name}, \n{df_name}'s shape {df.shape[0]} & \ncolumns:\n {df.columns.tolist()}\n\n"
         )
@@ -451,35 +457,21 @@ def main(simple: bool = False, zombie: bool = False):
             "\n\n\n=========================================================\n\n\n"
         )
         # logg to check dfs columns before prepping
-    logger.info(
-        "\n\n\n============DFS AT STRATEGY LEVEL's SHAPE, COLUMNS, & HEAD =============\n\n\n"
-    )
+    logger.info("\n\n\n==========================================\n\n\n")
 
-    for df_name, df in filter_dfs_dict.items():
-        save_excel(df, OUTPUT_DIR, file_name=f"{DATE}{df_name}_UNFILTERED")
-        logger.info(f"Saved {df_name} to {OUTPUT_DIR}/{DATE}{df_name}_UNFILTERED.xlsx")
-        logger.info(
-            f"{df_name}'s index:{df.index.name}, \n{df_name}'s shape {df.shape[0]} & \ncolumns:\n {df.columns.tolist()}\n\n"
-        )
-        # Temporarily override pandas display options
-        with pd.option_context(
-            "display.max_rows",
-            None,
-            "display.max_columns",
-            None,
-            "display.width",
-            None,
-            "display.max_colwidth",
-            None,
-        ):
-            logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
+    # 2.5.  FINALIZE DELTAS
+    # Unpacking filtered dataframes after filtering and dropping columns
 
-        logger.info(
-            "\n\n\n=========================================================\n\n\n"
-        )
+    delta_clarity = deltas_df_dict[
+        "delta_clarity"
+    ].copy()  # Let's save CLARITY delta dfs
+    delta_ex_ptf = deltas_df_dict["delta_ex_ptf"].copy()
+    delta_in_ptf = deltas_df_dict["delta_in_ptf"].copy()
+    delta_ex_bmk = deltas_df_dict["delta_ex_bmk"].copy()
+    delta_in_bmk = deltas_df_dict["delta_in_bmk"].copy()
 
     # Free space by delting the dicts and config list you are done with
-    del filter_dfs_dict, deltas_df_dict, compare_data_config, filter_configs
+    del deltas_df_dict, delta_process_config
 
     # 3.    PREP DELTAS BEFORE SAVING
     logger.info("\nPreparing filtered deltas before saving")
@@ -618,10 +610,10 @@ def main(simple: bool = False, zombie: bool = False):
                 logger.info(
                     f"Not filereing exclusion/inclusion for df {config["prep_config_name"]}'s {df_name}"
                 )
-                logger.info("Cleaning exclusion list for overrides OK")
-                df = clean_exclusion_list_with_ovr(
-                    df, exclusion_list_col="exclusion_list"
-                )
+                # logger.info("Cleaning exclusion list for overrides OK")
+                # df = clean_exclusion_list_with_ovr(
+                #     df, exclusion_list_col="exclusion_list"
+                # )
             config["dfs_dict"][df_name] = df
 
         if config["prep_config_name"] == "portfolio_deltas":
@@ -637,8 +629,9 @@ def main(simple: bool = False, zombie: bool = False):
             # remove rows with empyt exclusion lists
             logger.info("Cleaning empty exclusion lists")
             if df_name == "delta_clarity":
-                df = clean_empty_exclusion_rows(df, target_col="exclusion_list")
-            if df_name == "exclusion_df":
+                # df = clean_empty_exclusion_rows(df, target_col="exclusion_list")
+                pass
+            elif df_name == "exclusion_df":
                 df = clean_empty_exclusion_rows(df)
             config["dfs_dict"][df_name] = df
 
