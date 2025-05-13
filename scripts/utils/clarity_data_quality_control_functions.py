@@ -8,9 +8,10 @@ Module to define functions & constans to carry Clarity.ai's data quality control
 
 import logging
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from itertools import chain
 from collections import defaultdict
+import re
 
 import numpy as np
 import pandas as pd
@@ -144,7 +145,6 @@ def generate_delta(
     df1: pd.DataFrame,  # old_df that you get from othe function prepare_dataframes
     df2: pd.DataFrame,  # new_df that you get from othe function prepare_dataframes
     test_col: List[str] = delta_test_cols,
-    suffix_level: str = "",  # eg. "_brs"
     condition_list: List[str] = [],  # either ["EXCLUDED"] or ["OK", "FLAG"]
     delta_analysis_str: str = "",  # either "exclusion" or "inclusion"
     get_inc_excl: bool = True,  # if False, skip step 2 and return after comparison
@@ -239,7 +239,7 @@ def generate_delta(
             and str(df1.loc[row.name, col]).strip().upper() not in normalized_conditions
         ]
 
-    delta[f"{delta_analysis_str}_list{suffix_level}"] = delta.apply(
+    delta[f"{delta_analysis_str}_list"] = delta.apply(
         lambda row: get_delta_list(row), axis=1
     )
 
@@ -330,7 +330,7 @@ def get_issuer_level_df(df: pd.DataFrame, idx_name: str) -> pd.DataFrame:
     return df_cleaned[valid_rows]
 
 
-def filter_non_empty_lists(df: pd.DataFrame, column: str) -> pd.DataFrame:
+def filter_empty_lists(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """
     Returns a DataFrame filtered so that rows where the specified column contains
     an empty list are removed. Keeps rows where the column has a list with at least one element.
@@ -390,13 +390,13 @@ def reorder_columns(df: pd.DataFrame, keep_first: list[str], exclude: list[str] 
 def clean_inclusion_list(df):
     """
     Processes each row of df:
-    1. For each element in 'inclusion_list_brs', if the element is a key in 'ovr_list' and
+    1. For each element in 'inclusion_list', if the element is a key in 'ovr_list' and
        its value is 'EXCLUDED', remove the element.
-    2. Rows where 'inclusion_list_brs' is empty (or becomes empty after filtering) are dropped.
+    2. Rows where 'inclusion_list' is empty (or becomes empty after filtering) are dropped.
     """
 
     def process_row(row):
-        inc_list = row.get("inclusion_list_brs", [])
+        inc_list = row.get("inclusion_list", [])
         ovr_list = row.get("ovr_list", {})
 
         # If inc_list is a NumPy array, convert it to a list.
@@ -419,34 +419,15 @@ def clean_inclusion_list(df):
         ]
 
     # Apply the row-wise processing.
-    df.loc[:, "inclusion_list_brs"] = df.apply(process_row, axis=1)
+    df.loc[:, "inclusion_list"] = df.apply(process_row, axis=1)
 
-    # Drop rows where 'inclusion_list_brs' is empty.
-    df = df[
-        df["inclusion_list_brs"].apply(lambda x: isinstance(x, list) and len(x) > 0)
-    ]
+    # Drop rows where 'inclusion_list' is empty.
+    df = df[df["inclusion_list"].apply(lambda x: isinstance(x, list) and len(x) > 0)]
 
     return df
 
 
-def pair_elements(input_list):
-    """
-    Pairs consecutive elements in a list into tuples.
-    Parameters: -> input_list : list
-    -----------
-    Returns: -> list_of_tuples : list. A list where consecutive elements are paired as tuples.
-    --------
-    Raises TypeError: If the input is not a list and ValueError: If the list does not have an even number of elements.
-    """
-    if not isinstance(input_list, list):
-        raise TypeError("Expected a list as input.")
-    if len(input_list) % 2 != 0:
-        raise ValueError("The list must have an even number of elements.")
-
-    return [(input_list[i], input_list[i + 1]) for i in range(0, len(input_list), 2)]
-
-
-def clean_exclusion_list_with_ovr(df, exclusion_list_col: str = "exclusion_list_brs"):
+def clean_exclusion_list_with_ovr(df, exclusion_list_col: str = "exclusion_list"):
     # Define helper function with safety check
     def filter_exclusions(row):
         ovr_dict = row["ovr_list"] if isinstance(row["ovr_list"], dict) else {}
@@ -465,13 +446,32 @@ def clean_exclusion_list_with_ovr(df, exclusion_list_col: str = "exclusion_list_
 def clean_portfolio_and_exclusion_list(
     row,
     affected_col_name="affected_portfolio_str",
-    exclusion_list_name="exclusion_list_brs",
+    exclusion_list_name="exclusion_list",
 ):
     """
     First pairs elements in 'affected_portfolio_str' and filters them based
-    on 'exclusion_list_brs'. Then cleans 'exclusion_list_brs' based on the
+    on 'exclusion_list'. Then cleans 'exclusion_list' based on the
     filtered results.
     """
+
+    def pair_elements(input_list):
+        """
+        Pairs consecutive elements in a list into tuples.
+        Parameters: -> input_list : list
+        -----------
+        Returns: -> list_of_tuples : list. A list where consecutive elements are paired as tuples.
+        --------
+        Raises TypeError: If the input is not a list and ValueError: If the list does not have an even number of elements.
+        """
+        if not isinstance(input_list, list):
+            raise TypeError("Expected a list as input.")
+        if len(input_list) % 2 != 0:
+            raise ValueError("The list must have an even number of elements.")
+
+        return [
+            (input_list[i], input_list[i + 1]) for i in range(0, len(input_list), 2)
+        ]
+
     raw_list = row[affected_col_name]
     exclusion_list = row[exclusion_list_name]
 
@@ -487,17 +487,17 @@ def clean_portfolio_and_exclusion_list(
     # Extract strategies from the cleaned paired tuples
     affected_strategies = {strategy for _, strategy in cleaned_paired}
 
-    # Update exclusion_list_brs
-    row["exclusion_list_brs"] = [
+    # Update exclusion_list
+    row["exclusion_list"] = [
         strategy for strategy in exclusion_list if strategy in affected_strategies
     ]
 
     return row
 
 
-def clean_empty_exclusion_rows(df, target_col: str = "exclusion_list_brs"):
+def clean_empty_exclusion_rows(df, target_col: str = "exclusion_list"):
 
-    # Drop rows where exclusion_list_brs is empty after cleaning
+    # Drop rows where exclusion_list is empty after cleaning
     return df[df[target_col].apply(lambda x: isinstance(x, list) and len(x) > 0)]
 
 
@@ -560,7 +560,7 @@ def process_data_by_strategy(
                                  or dlt_inc_brs, and dlt_inc_benchmarks inclusions).
         strategies_list: A list of strategy names to iterate over (e.g., delta_test_cols).
         input_df_exclusion_col: Column name in input_delta_df that contains lists/iterables
-                                 of strategies for exclusion or inclusion criteria (e.g. "exclusion_list_brs" or "inclusion_list_brs").
+                                 of strategies for exclusion or inclusion criteria (e.g. "exclusion_list" or "inclusion_list").
         df1_lookup_source: DataFrame with previous Clarity Data (e.g., df_1).
         df2_lookup_source: DataFrame with latest Clarity Data (e.g., df_1).
         brs_lookup_source: DataFrame for the BRS lookup (e.g., brs_carteras_issuerlevel).
@@ -839,3 +839,79 @@ def process_data_by_strategy(
             )
 
     return str_dfs_dict
+
+
+def get_strategy_file(
+    date_prefix: str = "default", directory: Union[str, Path] = Path.cwd()
+) -> Tuple[Path, str]:
+    """
+    Return the most recent *strategy benchmark* file that matches *date_prefix*.
+
+    The directory is expected to contain files named
+
+        ``YYYYMMDD_strategies_snt world_portf_bmks.xlsx``
+
+    Parameters
+    ----------
+    date_prefix : str, optional
+        * ``"default"`` – return the latest date available.
+        * ``YYYY``      – a four-digit year.
+        * ``YYYYMM``    – a year+month.
+        * ``YYYYMMDD``  – a full date.
+        Anything else raises ``ValueError``.
+    directory : str | pathlib.Path, optional
+        Location that holds the Excel files (defaults to the current working
+        directory). It may be a ``Path`` or any value accepted by
+        ``pathlib.Path``.
+
+    Returns
+    -------
+    path : pathlib.Path
+        Absolute path of the chosen file.
+    date_str : str
+        The 8-digit date (``YYYYMMDD``) extracted from the filename.
+
+    Raises
+    ------
+    FileNotFoundError
+        No file in *directory* satisfies the criteria.
+    ValueError
+        *date_prefix* is neither ``"default"`` nor a 4/6/8-digit string.
+
+    """
+
+    # Input sanitisation
+    directory = Path(directory).expanduser().resolve()  # normalise path
+    date_prefix = date_prefix.strip().lower()  # remove blanks, case insensitive
+
+    if date_prefix != "default" and not re.fullmatch(
+        r"\d{4}(\d{2}(\d{2})?)?", date_prefix
+    ):
+        raise ValueError(
+            "date_prefix must be 'default' or a 4, 6, or 8 digit string "
+            "(YYYY | YYYYMM | YYYYMMDD)"
+        )
+
+    # Enumerate files and keep those that satisfy the pattern
+    pattern = re.compile(
+        r"(?P<date>\d{8})_strategies_snt world_portf_bmks\.xlsx$", re.IGNORECASE
+    )
+
+    candidates: List[Tuple[str, Path]] = []
+    for file in directory.iterdir():
+        if not file.is_file():  # ignore sub-directories
+            continue
+        match = pattern.match(file.name)
+        if match:
+            date_str = match.group("date")
+            if date_prefix == "default" or date_str.startswith(date_prefix):
+                candidates.append((date_str, file))
+
+    # Pick the newest file (lexicographic order works because the format is YYYYMMDD)
+    if not candidates:
+        raise FileNotFoundError(
+            f"No files found in '{directory}' matching prefix '{date_prefix}'."
+        )
+
+    date_str, path = max(candidates, key=lambda t: t[0])
+    return path, date_str

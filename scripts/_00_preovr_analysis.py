@@ -29,11 +29,10 @@ from scripts.utils.dataloaders import (
 from scripts.utils.clarity_data_quality_control_functions import (
     prepare_dataframes,
     generate_delta,
-    finalize_delta,
     create_override_dict,
     add_portfolio_benchmark_info_to_df,
     get_issuer_level_df,
-    filter_non_empty_lists,
+    filter_empty_lists,
     filter_rows_with_common_elements,
     reorder_columns,
     clean_inclusion_list,
@@ -41,7 +40,6 @@ from scripts.utils.clarity_data_quality_control_functions import (
     clean_exclusion_list_with_ovr,
     clean_empty_exclusion_rows,
     process_data_by_strategy,
-    filter_and_drop,
 )
 
 from scripts.utils.zombie_killer import main as zombie_killer
@@ -144,7 +142,7 @@ def main(simple: bool = False, zombie: bool = False):
     logger.info(f"IT WILL RUN STRATEGY LEVEL ANALYSIS: {simple}")
     logger.info(f"IT WILL RUN ZOMBIE ANALYSIS: {zombie}")
     # 1.    LOAD DATA
-
+    logger.info("\n1. LOADING DATA\n\n\n")
     # 1.1.  aladdin /brs data / perimeters
     logger.info("Loading BRS data")
     brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
@@ -163,19 +161,23 @@ def main(simple: bool = False, zombie: bool = False):
 
     # 1.2.  clarity data
     logger.info("Loading clarity data")
-    df_1 = load_clarity_data(DF_PREV_PATH, columns_to_read)
-    df_2 = load_clarity_data(DF_NEW_PATH, columns_to_read)
+    prep_old_clarity_df = load_clarity_data(DF_PREV_PATH, columns_to_read)
+    prep_new_clarity_df = load_clarity_data(DF_NEW_PATH, columns_to_read)
     # let's rename columns in df_1 and df_2 using the rename_dict
-    df_1.rename(columns=rename_dict, inplace=True)
-    df_2.rename(columns=rename_dict, inplace=True)
-    df_2_copy = df_2.copy()
+    prep_old_clarity_df.rename(columns=rename_dict, inplace=True)
+    prep_new_clarity_df.rename(columns=rename_dict, inplace=True)
+    df_2_copy = prep_new_clarity_df.copy()
     # add aladdin_id to df_1 and df_2
     logger.info("Adding aladdin_id to clarity dfs")
-    df_1 = df_1.merge(crosreference[["permid", "aladdin_id"]], on="permid", how="left")
-    df_2 = df_2.merge(crosreference[["permid", "aladdin_id"]], on="permid", how="left")
+    prep_old_clarity_df = prep_old_clarity_df.merge(
+        crosreference[["permid", "aladdin_id"]], on="permid", how="left"
+    )
+    prep_new_clarity_df = prep_new_clarity_df.merge(
+        crosreference[["permid", "aladdin_id"]], on="permid", how="left"
+    )
 
     logger.info(
-        f"previous clarity df's  rows: {df_1.shape[0]}, new clarity df's rows: {df_2.shape[0]}"
+        f"previous clarity df's  rows: {prep_old_clarity_df.shape[0]}, new clarity df's rows: {prep_new_clarity_df.shape[0]}"
     )
 
     # 1.3.   ESG Team data: Overrides & Portfolios
@@ -206,11 +208,14 @@ def main(simple: bool = False, zombie: bool = False):
         benchmark_dict,
     ) = load_portfolios(path_pb=BMK_PORTF_STR_PATH, path_committe=COMMITTEE_PATH)
 
+    # START PRE-OVR ANALYSIS
+    logger.info("\n\n\nStarting pre-ovr-analysis\n\n\n")
     # 2.    PREP DATA FOR ANALYSIS
+    logger.info("\n\n\n2. PREPPEING DATA FOR DELTA GENERATION\n\n\n")
     # make sure that the values of of the columns delta_test_cols are strings and all uppercase and strip
     for col in delta_test_cols:
-        df_1[col] = df_1[col].str.upper().str.strip()
-        df_2[col] = df_2[col].str.upper().str.strip()
+        prep_old_clarity_df[col] = prep_old_clarity_df[col].str.upper().str.strip()
+        prep_new_clarity_df[col] = prep_new_clarity_df[col].str.upper().str.strip()
         brs_carteras_issuerlevel[col] = (
             brs_carteras_issuerlevel[col].str.upper().str.strip()
         )
@@ -221,11 +226,11 @@ def main(simple: bool = False, zombie: bool = False):
     # 2.2.  PREPARE DATA CLARITY LEVEL
     logger.info("Preparing dataframes for clarity level")
     (
-        df_1,
-        df_2,
+        prep_old_clarity_df,
+        prep_new_clarity_df,
         new_issuers_clarity,
         out_issuer_clarity,
-    ) = prepare_dataframes(df_1, df_2)
+    ) = prepare_dataframes(prep_old_clarity_df, prep_new_clarity_df)
     # reset index for new_issuers_clarity and out_issuer_clarity
     new_issuers_clarity.reset_index(inplace=True)
     out_issuer_clarity.reset_index(inplace=True)
@@ -244,57 +249,62 @@ def main(simple: bool = False, zombie: bool = False):
     # 2.3.  PREPARE DATA BRS LEVEL FOR PORTFOLIOS
     logger.info("Preparing dataframes for BRS Portfolio level")
     (
-        brs_df_portfolios,
-        clarity_df,
+        prep_brs_df_ptf,
+        prep_clarity_df_ptf,
         in_clarity_but_not_in_brs,
-        in_brs_but_not_in_clarity,
-    ) = prepare_dataframes(brs_carteras_issuerlevel, df_2, target_index="aladdin_id")
+        in_brs_but_not_in_clarity,  # zombies?
+    ) = prepare_dataframes(
+        brs_carteras_issuerlevel, prep_new_clarity_df, target_index="aladdin_id"
+    )
 
     # log size of new and missing issuers
     logger.info(
         f"Number issuers in clarity but not Aladdin: {in_clarity_but_not_in_brs.shape[0]}"
     )
     logger.info(
-        f"Number issuers in Aladdin but not Clarity: {in_brs_but_not_in_clarity.shape[0]}"
+        f"Number issuers in Aladdin's Portfolios but not Clarity: {in_brs_but_not_in_clarity.shape[0]}"
     )
 
     # 2.4.  PREPARE DATA BENCHMARK BRS LEVEL
     logger.info("Preparing dataframes for BRS benchmarks level")
     (
-        brs_df_benchmarks,
-        clarity_df_benchmarks,
+        prep_brs_df_bmk,
+        prep_clarity_df_bmk,
         in_clarity_but_not_in_brs_benchmarks,
         in_brs_benchmark_but_not_in_clarity,
-    ) = prepare_dataframes(brs_benchmarks_issuerlevel, df_2, target_index="aladdin_id")
+    ) = prepare_dataframes(
+        brs_benchmarks_issuerlevel, prep_new_clarity_df, target_index="aladdin_id"
+    )
 
     # log size of new and missing issuers
     logger.info(
         f"Number issuers in clarity but not benchmarks: {in_clarity_but_not_in_brs_benchmarks.shape[0]}"
     )
     logger.info(
-        f"Number issuers in benchmarks but not Clarity: {in_brs_benchmark_but_not_in_clarity.shape[0]}"
+        f"Number issuers in Benchmarks but not Clarity: {in_brs_benchmark_but_not_in_clarity.shape[0]}"
     )
-
-    # START PRE-OVR ANALYSIS
-    logger.info("Starting pre-ovr-analysis")
 
     # NEW CROSSREFERENCE HAS MULTIPLE ISSUER ID FOR A SINGLE PERMID
     logger.info(
-        f"Checking index uniqueness: df1 index duplicates: {df_1.index.duplicated().sum()}"
+        f"Checking index uniqueness: df1 index duplicates: {prep_old_clarity_df.index.duplicated().sum()}"
     )
     logger.info(
-        f"Checking index uniqueness: df_2 index duplicates: {df_2.index.duplicated().sum()}"
+        f"Checking index uniqueness: df_2 index duplicates: {prep_new_clarity_df.index.duplicated().sum()}"
     )
-    duplicated_rows_df_1 = df_1[df_1.index.duplicated(keep=False)]
+    duplicated_rows_df_1 = prep_old_clarity_df[
+        prep_old_clarity_df.index.duplicated(keep=False)
+    ]
     if not duplicated_rows_df_1.empty:
         logger.warning(f"\n\n=======CHECK THIS OUT==========\n\n")
         logger.warning(f"Duplicated indexes found in df1:\n{duplicated_rows_df_1}")
-    duplicated_rows_df_2 = df_2[df_2.index.duplicated(keep=False)]
+    duplicated_rows_df_2 = prep_new_clarity_df[
+        prep_new_clarity_df.index.duplicated(keep=False)
+    ]
     if not duplicated_rows_df_2.empty:
         logger.warning(f"Duplicated indexes found in df1:\n{duplicated_rows_df_2}")
     # log index, issuer_name, and aladdin_id for the duplicated_rows_df1 and duplicated_rows_df_2
     if not duplicated_rows_df_1.empty:
-        logger.warning("\nHERE ARE THE DUPLICATED ISSUERS!!!!!!!\n")
+        logger.warning("\nTHERE ARE THE DUPLICATED ISSUERS!!!!!!!\n")
         logger.warning(
             f"Duplicated rows in df_1:\n{duplicated_rows_df_1[['issuer_name','aladdin_id']].to_string(index=True)}"
         )
@@ -304,59 +314,70 @@ def main(simple: bool = False, zombie: bool = False):
         )
         sys.exit()
 
-    # 2.3. GENERATE DELTAS
+    # 3. GENERATE DELTAS
+    logger.info("\n\n\n3. GENERATING DELTAS\n\n\n")
     logger.info("Start comparing the dataframes and building their deltas")
     delta_process_config = [
         {
             "delta_name": "delta_clarity",
-            "compared_dfs": [df_1, df_2],
-            "suffix": "",
+            "compared_dfs": [prep_old_clarity_df, prep_new_clarity_df],
             "target_index": "permid",
-            "get_incl_excl": False,
+            "excl_incl_dict": {
+                "excl_dict": {
+                    "df_name": "delta_ex_clarity",
+                    "delta_analysis_str": "exclusion",
+                    "condition_list": ["EXCLUDED"],
+                    "filtering_col": "new_exclusion",
+                    "dropping_cols": ["new_inclusion", "inclusion_list"],
+                },
+                "incl_dict": {
+                    "df_name": "delta_in_clarity",
+                    "delta_analysis_str": "inclusion",
+                    "condition_list": ["OK", "FLAG"],
+                    "filtering_col": "new_inclusion",
+                    "dropping_cols": ["new_exclusion", "exclusion_list"],
+                },
+            },
         },
         {
             "delta_name": "delta_brs_ptf",
-            "compared_dfs": [brs_df_portfolios, clarity_df],
-            "suffix": "_brs",
+            "compared_dfs": [prep_brs_df_ptf, prep_clarity_df_ptf],
             "target_index": "aladdin_id",
-            "get_incl_excl": True,
             "excl_incl_dict": {
                 "excl_dict": {
                     "df_name": "delta_ex_ptf",
                     "delta_analysis_str": "exclusion",
                     "condition_list": ["EXCLUDED"],
                     "filtering_col": "new_exclusion",
-                    "dropping_cols": ["new_inclusion", "inclusion_list_brs"],
+                    "dropping_cols": ["new_inclusion", "inclusion_list"],
                 },
                 "incl_dict": {
                     "df_name": "delta_in_ptf",
                     "delta_analysis_str": "inclusion",
                     "condition_list": ["OK", "FLAG"],
                     "filtering_col": "new_inclusion",
-                    "dropping_cols": ["new_exclusion", "exclusion_list_brs"],
+                    "dropping_cols": ["new_exclusion", "exclusion_list"],
                 },
             },
         },
         {
             "delta_name": "delta_brs_bmks",
-            "compared_dfs": [brs_df_benchmarks, clarity_df_benchmarks],
-            "suffix": "_brs",
+            "compared_dfs": [prep_brs_df_bmk, prep_clarity_df_bmk],
             "target_index": "aladdin_id",
-            "get_incl_excl": True,
             "excl_incl_dict": {
                 "excl_dict": {
                     "df_name": "delta_ex_bmk",
                     "delta_analysis_str": "exclusion",
                     "condition_list": ["EXCLUDED"],
                     "filtering_col": "new_exclusion",
-                    "dropping_cols": ["new_inclusion", "inclusion_list_brs"],
+                    "dropping_cols": ["new_inclusion", "inclusion_list"],
                 },
                 "incl_dict": {
                     "df_name": "delta_in_bmk",
                     "delta_analysis_str": "inclusion",
                     "condition_list": ["OK", "FLAG"],
                     "filtering_col": "new_inclusion",
-                    "dropping_cols": ["new_exclusion", "exclusion_list_brs"],
+                    "dropping_cols": ["new_exclusion", "exclusion_list"],
                 },
             },
         },
@@ -368,66 +389,45 @@ def main(simple: bool = False, zombie: bool = False):
         delta_name = f"{config["delta_name"]}"
         old_df, new_df = config["compared_dfs"]
         target_idx = config["target_index"]
-        suffix = config["suffix"]
-        get_incl_excl_flag = config["get_incl_excl"]
         logger.info(f"Initiating delta generation process for {delta_name}")
-        if get_incl_excl_flag:
-            excl_df_name = config["excl_incl_dict"]["excl_dict"]["df_name"]
-            excl_delta_analysis_str = config["excl_incl_dict"]["excl_dict"][
-                "delta_analysis_str"
-            ]
-            excl_condition_list = config["excl_incl_dict"]["excl_dict"][
-                "condition_list"
-            ]
-            excl_filtering_col = config["excl_incl_dict"]["excl_dict"]["filtering_col"]
-            excl_dropping_cols = config["excl_incl_dict"]["excl_dict"]["dropping_cols"]
-            logger.info(f"Generating delta for {excl_df_name}")
-            deltas_df_dict[excl_df_name] = generate_delta(
-                old_df,
-                new_df,
-                suffix_level=suffix,
-                delta_analysis_str=excl_delta_analysis_str,
-                condition_list=excl_condition_list,
-                get_inc_excl=True,
-                delta_name_str=delta_name,
-                target_index=target_idx,
-                filter_col=excl_filtering_col,
-                drop_cols=excl_dropping_cols,
-            )
-
-            incl_df_name = config["excl_incl_dict"]["incl_dict"]["df_name"]
-            incl_delta_analysis_str = config["excl_incl_dict"]["incl_dict"][
-                "delta_analysis_str"
-            ]
-            incl_condition_list = config["excl_incl_dict"]["incl_dict"][
-                "condition_list"
-            ]
-            incl_filtering_col = config["excl_incl_dict"]["incl_dict"]["filtering_col"]
-            incl_dropping_cols = config["excl_incl_dict"]["incl_dict"]["dropping_cols"]
-            logger.info(f"Generating delta for {excl_df_name}")
-            deltas_df_dict[incl_df_name] = generate_delta(
-                old_df,
-                new_df,
-                suffix_level=suffix,
-                delta_analysis_str=incl_delta_analysis_str,
-                condition_list=incl_condition_list,
-                get_inc_excl=True,
-                delta_name_str=delta_name,
-                target_index=target_idx,
-                filter_col=incl_filtering_col,
-                drop_cols=incl_dropping_cols,
-            )
-
-        else:
-            # Generate delta without inclusion/exclusion analysis
-            deltas_df_dict[delta_name] = generate_delta(
-                old_df,
-                new_df,
-                suffix_level=suffix,
-                delta_name_str=delta_name,
-                target_index=target_idx,
-                get_inc_excl=False,
-            )
+        excl_df_name = config["excl_incl_dict"]["excl_dict"]["df_name"]
+        excl_delta_analysis_str = config["excl_incl_dict"]["excl_dict"][
+            "delta_analysis_str"
+        ]
+        excl_condition_list = config["excl_incl_dict"]["excl_dict"]["condition_list"]
+        excl_filtering_col = config["excl_incl_dict"]["excl_dict"]["filtering_col"]
+        excl_dropping_cols = config["excl_incl_dict"]["excl_dict"]["dropping_cols"]
+        logger.info(f"Generating delta for {excl_df_name}")
+        deltas_df_dict[excl_df_name] = generate_delta(
+            old_df,
+            new_df,
+            delta_analysis_str=excl_delta_analysis_str,
+            condition_list=excl_condition_list,
+            get_inc_excl=True,
+            delta_name_str=delta_name,
+            target_index=target_idx,
+            filter_col=excl_filtering_col,
+            drop_cols=excl_dropping_cols,
+        )
+        incl_df_name = config["excl_incl_dict"]["incl_dict"]["df_name"]
+        incl_delta_analysis_str = config["excl_incl_dict"]["incl_dict"][
+            "delta_analysis_str"
+        ]
+        incl_condition_list = config["excl_incl_dict"]["incl_dict"]["condition_list"]
+        incl_filtering_col = config["excl_incl_dict"]["incl_dict"]["filtering_col"]
+        incl_dropping_cols = config["excl_incl_dict"]["incl_dict"]["dropping_cols"]
+        logger.info(f"Generating delta for {excl_df_name}")
+        deltas_df_dict[incl_df_name] = generate_delta(
+            old_df,
+            new_df,
+            delta_analysis_str=incl_delta_analysis_str,
+            condition_list=incl_condition_list,
+            get_inc_excl=True,
+            delta_name_str=delta_name,
+            target_index=target_idx,
+            filter_col=incl_filtering_col,
+            drop_cols=incl_dropping_cols,
+        )
 
     # logg to check dfs columns before prepping
     logger.info(
@@ -453,18 +453,14 @@ def main(simple: bool = False, zombie: bool = False):
         ):
             logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
 
-        logger.info(
-            "\n\n\n=========================================================\n\n\n"
-        )
         # logg to check dfs columns before prepping
     logger.info("\n\n\n==========================================\n\n\n")
 
-    # 2.5.  FINALIZE DELTAS
+    # 3.1.  Unpack DELTAS
     # Unpacking filtered dataframes after filtering and dropping columns
 
-    delta_clarity = deltas_df_dict[
-        "delta_clarity"
-    ].copy()  # Let's save CLARITY delta dfs
+    delta_ex_clarity = deltas_df_dict["delta_ex_clarity"].copy()
+    delta_in_clarity = deltas_df_dict["delta_in_clarity"].copy()
     delta_ex_ptf = deltas_df_dict["delta_ex_ptf"].copy()
     delta_in_ptf = deltas_df_dict["delta_in_ptf"].copy()
     delta_ex_bmk = deltas_df_dict["delta_ex_bmk"].copy()
@@ -473,40 +469,105 @@ def main(simple: bool = False, zombie: bool = False):
     # Free space by delting the dicts and config list you are done with
     del deltas_df_dict, delta_process_config
 
-    # 3.    PREP DELTAS BEFORE SAVING
-    logger.info("\nPreparing filtered deltas before saving")
+    # 4.    ADDING PORTFOLIO & BENCHMARK INFO TO DELTAS & FILTERING & CLEANING
     # Define prepping configuration
     prep_config = [
         {
             "prep_config_name": "clarity_deltas",
-            "dfs_dict": {"delta_clarity": delta_clarity},
-            "missing_permid": False,
-            # let's define paramst for the battery of functions
+            "dfs_dict": {
+                "exclusion_df": delta_ex_clarity,
+                "inclusion_df": delta_in_clarity,
+            },
+            "check_permid": False,
             "brs_data": False,
-        },  # clarity deltas
+        },
         {
             "prep_config_name": "portfolio_deltas",
             "dfs_dict": {"exclusion_df": delta_ex_ptf, "inclusion_df": delta_in_ptf},
-            "missing_permid": True,
-            # let's define paramst for the battery of functions
+            "check_permid": True,
             "brs_data": True,
             "main_parameter": "affected_portfolio_str",
-        },  # portfolio deltas
+        },
         {
             "prep_config_name": "benchmark_deltas",
             "dfs_dict": {"exclusion_df": delta_ex_bmk, "inclusion_df": delta_in_bmk},
-            "missing_permid": True,
-            # let's define paramst for the battery of functions
+            "check_permid": True,
             "brs_data": True,
             "main_parameter": "affected_benchmark_str",
-        },  # benchmark deltas
+        },
     ]
 
     final_dfs_dict = {}  # to persist all cleaned dataframes
 
+    # DEBUG LOGGING - REMOVE LATER - LET'S CHECK HOW THE DATA LOOKS LIKE
+    # Populate final_dfs_dict with the initial dfs_dicts
     for config in prep_config:
-        # apply to all deltdf_name, a dfs_dicts
         for df_name, df in config["dfs_dict"].items():
+            final_key = f"{config['prep_config_name']}_{df_name}"
+            final_dfs_dict[final_key] = df
+
+    logger.info(
+        "\n\n========== SHOW dataframes BEFORE Adding Portfolio & Benchmark Information, Filtering, and Cleaning ==========\n\n"
+    )
+    for df_name, df in final_dfs_dict.items():
+
+        # logg columns for all the dfs
+        logger.info(f"Columns in {df_name}:\n {df.columns.tolist()}\n")
+        # Log if df has index and if it does the index name
+        if df.index.name:
+            logger.info(f"Index name for {df_name}: {df.index.name}")
+            logger.info(
+                f"""
+            Columns in {df_name}:\n {df.columns.tolist()}\n
+            Number of rows in {df_name}: {df.shape[0]}\n
+            """
+            )
+            # Temporarily override pandas display options
+            with pd.option_context(
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,
+                "display.width",
+                None,
+                "display.max_colwidth",
+                None,
+            ):
+                logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
+
+        else:
+            logger.info(
+                f"""
+            Columns in {df_name}:\n {df.columns.tolist()}\n
+            Number of rows in {df_name}: {df.shape[0]}\n
+            """
+            )
+            # Temporarily override pandas display options
+            with pd.option_context(
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,
+                "display.width",
+                None,
+                "display.max_colwidth",
+                None,
+            ):
+                logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
+
+    logger.info("\n\n================================================\n\n")
+
+    logger.info(
+        "\n\n\n4.  ADDING PORTFOLIO & BENCHMARK INFO TO DELTAS & 5. FILTERING\n\n\n"
+    )
+
+    for config in prep_config:
+        logger.info(
+            "\n4.1. standarise indeces, drop column isin if present, and add ovr_list to all dfs_dict"
+        )
+        # 4.1. standarise indeces, drop column isin if present, and add ovr_list to all dfs_dict
+        for df_name, df in config["dfs_dict"].items():
+            # Standarise Indices & Reset Index if necessary
             logger.info("Let's standrise indeces")
             if "index" in df.columns:
                 df.drop(columns="index", inplace=True)
@@ -520,9 +581,11 @@ def main(simple: bool = False, zombie: bool = False):
                 logger.info(
                     f"Reset index from {config["prep_config_name"]}'s {df_name}."
                 )
-            # let's drop isin from all dfs_dict
-            logger.info(f"Dropping isin column from {df_name}")
-            df.drop(columns=["isin"], inplace=True, errors="ignore")
+            # let's drop isin from all dfs_dict if it's a column
+            if "isin" in df.columns:
+                logger.info(f"Dropping isin column from {df_name}")
+                df.drop(columns=["isin"], inplace=True, errors="ignore")
+
             # add new column 'ovr_dict' value using aladdin_id
             logger.info(
                 f"Adding column 'ovr_list' to {config["prep_config_name"]}'s {df_name}"
@@ -531,117 +594,67 @@ def main(simple: bool = False, zombie: bool = False):
                 df["ovr_list"] = df["aladdin_id"].map(ovr_dict)
                 config["dfs_dict"][df_name] = df
             except KeyError as e:
-                logger.error(
-                    f"Missing expected colummn in {config["prep_config_name"]}'s {df_name}:\n{e}"
+                e.add_note(
+                    f"Missing expected colummn in {config["prep_config_name"]}'s {df_name}."
                 )
-                logger.info(
+                e.add_note(
                     f"Colummn in {config["prep_config_name"]}'s {df_name}:\n{df.columns.tolist()}"
                 )
+                logger.error(f"{e}")
+                raise e
 
-        if config["missing_permid"]:
+        # 4.2. check for dataframes that do not have natively permid that they have the column
+        logger.info(
+            "\n4.2. check for dataframes that do not have natively permid that they have the column"
+        )
+        if config["check_permid"]:
             for df_name, df in config["dfs_dict"].items():
-                logger.info(
-                    f"Merging to add permid to {config["prep_config_name"]}'s {df_name}"
-                )
-                df = df.merge(
-                    crosreference[["aladdin_id", "permid"]], on="aladdin_id", how="left"
-                )
-                config["dfs_dict"][df_name] = df
+                # check if permid is in df.columns
+                if "permid" not in df.columns:
+                    logger.info(f"permid not in {df_name}")
+                    logger.info(
+                        f"Merging to add permid to {config["prep_config_name"]}'s {df_name}"
+                    )
+                    df = df.merge(
+                        crosreference[["aladdin_id", "permid"]],
+                        on="aladdin_id",
+                        how="left",
+                    )
+                    config["dfs_dict"][df_name] = df
+                else:
+                    logger.info(f"permid already in {df_name}, continue...")
+        else:
+            logger.info(f"permid already in {df_name}, continue...")
 
-        # let's apply the following functions:
+        # 4.3. Adding portfolio and benchmark information to dfs
+        logger.info("\n4.3. Adding portfolio and benchmark information to dfs")
         for df_name, df in config["dfs_dict"].items():
-            # 1. add_portfolio_benchmark_info_to_df (without string "affected_benchmark_str")
+            # 4.3.1. Add affected Portfolio info to df
             logger.info(
                 f" Adding affect portfolio info to {config["prep_config_name"]}'s {df_name}"
             )
             df = add_portfolio_benchmark_info_to_df(portfolio_dict, df)
-            # 2. add_portfolio_benchmark_info_to_df (with string "affected_benchmark_str")
+            # 4.3.2. Add affected Benchmark info to df )
             logger.info(
                 f" Adding affect benchmark info to {config["prep_config_name"]}'s {df_name}"
             )
+            # 4.3.3. filter_non_empty_lists
             df = add_portfolio_benchmark_info_to_df(
                 benchmark_dict, df, "affected_benchmark_str"
             )
-            # 3. filter_non_empty_lists
+            # safe updated df into the dict
             config["dfs_dict"][df_name] = df
 
-        if config["brs_data"]:
-            for df_name, df in config["dfs_dict"].items():
-                logger.info(
-                    f"Filtering non empty lists for {config["prep_config_name"]}'s {df_name}"
-                )
-                df = filter_non_empty_lists(df, config["main_parameter"])
-                # 4. filter_rows_with_common_elements
-                logger.info(
-                    f"Filtering rows with common elements for {config["prep_config_name"]}'s {df_name}"
-                )
-                if df_name == "exclusion_df":
-                    df = filter_rows_with_common_elements(
-                        df, "exclusion_list_brs", config["main_parameter"]
-                    )
-                    config["dfs_dict"][df_name] = df
-                    logger.info(
-                        f"{df_name} has {config["dfs_dict"][df_name].shape[0]} rows"
-                    )
-                else:
-                    df = filter_rows_with_common_elements(
-                        df, "inclusion_list_brs", config["main_parameter"]
-                    )
-                    config["dfs_dict"][df_name] = df
-                    logger.info(
-                        f"{df_name} has {config["dfs_dict"][df_name].shape[0]} rows"
-                    )
-
-        # 5. reoder columns for all the deltas
-        for df_name, df in config["dfs_dict"].items():
-            logger.info(
-                f"Reordering columns for {config["prep_config_name"]}'s {df_name}"
-            )
-            df = reorder_columns(df, id_name_issuers_cols, delta_test_cols)
-            if df_name == "exclusion_df":
-                # Clean exclusion data
-                logger.info("Cleaning exclusion list for overrides OK")
-                df = clean_exclusion_list_with_ovr(df)
-            elif df_name == "inclusion_df":
-                # Clean inclusion data
-                logger.info("Cleaning inclusion lists with overrides")
-                df = clean_inclusion_list(df)
-            else:
-                logger.info(
-                    f"Not filereing exclusion/inclusion for df {config["prep_config_name"]}'s {df_name}"
-                )
-                # logger.info("Cleaning exclusion list for overrides OK")
-                # df = clean_exclusion_list_with_ovr(
-                #     df, exclusion_list_col="exclusion_list"
-                # )
-            config["dfs_dict"][df_name] = df
-
-        if config["prep_config_name"] == "portfolio_deltas":
-            for df_name, df in config["dfs_dict"].items():
-                if df_name == "exclusion_df":
-                    # apply clean portfolio and exclusion list
-                    # cleant portfolio and exclusion list
-                    logger.info("Cleaning portfolio and exclusion lists")
-                    df = df.apply(clean_portfolio_and_exclusion_list, axis=1)
-                    config["dfs_dict"][df_name] = df
-
-        for df_name, df in config["dfs_dict"].items():
-            # remove rows with empyt exclusion lists
-            logger.info("Cleaning empty exclusion lists")
-            if df_name == "delta_clarity":
-                # df = clean_empty_exclusion_rows(df, target_col="exclusion_list")
-                pass
-            elif df_name == "exclusion_df":
-                df = clean_empty_exclusion_rows(df)
-            config["dfs_dict"][df_name] = df
-
-        # persist cleaned DataFrames
+    # DEBUG LOGGING - REMOVE LATER - LET'S CHECK HOW THE DATA LOOKS LIKE
+    # Populate final_dfs_dict with the initial dfs_dicts
+    for config in prep_config:
         for df_name, df in config["dfs_dict"].items():
             final_key = f"{config['prep_config_name']}_{df_name}"
             final_dfs_dict[final_key] = df
 
-    # MINOR DEBUG LOGGING - REMOVE LATER
-    logger.info("\n\n========== SHOW dataframes AFTER cleaning ==========\n\n")
+    logger.info(
+        "\n\n========== SHOW dataframes AFTER Adding Portfolio & Benchmark Information. BUT BEFORE Filtering, and Cleaning ==========\n\n"
+    )
     for df_name, df in final_dfs_dict.items():
 
         # logg columns for all the dfs
@@ -649,14 +662,249 @@ def main(simple: bool = False, zombie: bool = False):
         # Log if df has index and if it does the index name
         if df.index.name:
             logger.info(f"Index name for {df_name}: {df.index.name}")
-            logger.info(f"Columns in {df_name}:\n {df.columns.tolist()}\n")
+            logger.info(
+                f"""
+            Columns in {df_name}:\n {df.columns.tolist()}\n
+            Number of rows in {df_name}: {df.shape[0]}\n
+            """
+            )
+            # Temporarily override pandas display options
+            with pd.option_context(
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,
+                "display.width",
+                None,
+                "display.max_colwidth",
+                None,
+            ):
+                logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
+
         else:
-            logger.info(f"Columns in {df_name}:\n {df.columns.tolist()}\n")
+            logger.info(
+                f"""
+            Columns in {df_name}:\n {df.columns.tolist()}\n
+            Number of rows in {df_name}: {df.shape[0]}\n
+            """
+            )
+            # Temporarily override pandas display options
+            with pd.option_context(
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,
+                "display.width",
+                None,
+                "display.max_colwidth",
+                None,
+            ):
+                logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
+
+    logger.info("\n\n================================================\n\n")
+
+    # 5.    FILTERING & CLEANING DELTAS
+    logger.info("\n\n\n5. FILTERING & CLEANING DELTAS\n\n\n")
+
+    for config in prep_config:
+        # 5. Filtering BRS Delta's based on affected portfolio & benchmark
+        logger.info(
+            "\n5. Filtering & Cleaning BRS Delta's based on affected portfolio & benchmark\n"
+        )
+        if config["brs_data"]:
+            logger.info(
+                f"\n5.1 Filtering Empty {config["main_parameter"]} for {config["prep_config_name"]}'s {df_name}.\n"
+            )
+            for df_name, df in config["dfs_dict"].items():
+                # 5.1. filtering not empty lists
+                logger.info(
+                    f"""
+                    {df_name} had {df.shape[0]} before applying filter_empty_lists() func to empty {config["main_parameter"]}.
+                    """
+                )
+                df = filter_empty_lists(df, config["main_parameter"])
+                config["dfs_dict"][df_name] = df
+                logger.info(
+                    f"""
+                    {df_name} has {df.shape[0]} after applying filter_empty_lists() func to empty {config["main_parameter"]}.
+                    """
+                )
+
+        # 5.2.a filter rows with common elements
+        if config["brs_data"]:
+            for df_name, df in config["dfs_dict"].items():
+                if df_name == "exclusion_df":
+                    # 5.2.1.a filter rows with common elements in the exclusion list & clean exclusion list
+                    logger.info(
+                        f"""
+                        \n5.2.1.a Filtering rows with common elements using filter_rows_with_common_elements() func for {config["prep_config_name"]}'s {df_name}.
+                        {df_name} had {df.shape[0]} ROWS before applying filter_rows_with_common_elements() func to empty {config["main_parameter"]}.
+                        """
+                    )
+                    df = filter_rows_with_common_elements(
+                        df, "exclusion_list", config["main_parameter"]
+                    )
+                    logger.info(
+                        f"""
+                        {df_name} has {df.shape[0]} after applying filter_rows_with_common_elements() func to empty {config["main_parameter"]}.
+                        """
+                    )
+                    # 5.2.2.a Clean exclusion data
+                    logger.info(
+                        f"""
+                        \n5.2.2.a Cleaning exclusion list for overrides OK. 
+                        {df_name} had {config["dfs_dict"][df_name].shape[0]} rows BEFORE applying clean_exclusion_list_with_ovr() func.
+                        """
+                    )
+                    df = clean_exclusion_list_with_ovr(df)
+                    logger.info(
+                        f"{df_name} has {config["dfs_dict"][df_name].shape[0]} rows AFTER applying clean_exclusion_list_with_ovr() func."
+                    )
+                    config["dfs_dict"][df_name] = df
+                else:
+                    # 5.2.b filter rows with common elements in the inclusion list & clean inclusion list
+                    # 5.2.1.b filter rows with common elements in the exclusion list & clean exclusion list
+                    logger.info(
+                        f"""
+                        \n5.2.1.b Filter rows with common elements in the inclusion list & clean inclusion list. 
+                        {df_name} had {config["dfs_dict"][df_name].shape[0]} rows BEFORE applying filter_rows_with_common_elements() func.
+                        """
+                    )
+
+                    df = filter_rows_with_common_elements(
+                        df, "inclusion_list", config["main_parameter"]
+                    )
+                    # 5.2.2.b Clean inclusion data
+                    logger.info(
+                        f"""
+                        \n5.2.2.b Cleaning inclusion list. 
+                        {df_name} had {config["dfs_dict"][df_name].shape[0]} rows BEFORE applying clean_inclusion_list() func.
+                        """
+                    )
+                    df = clean_inclusion_list(df)
+                    config["dfs_dict"][df_name] = df
+                    logger.info(
+                        f"{df_name} has {config["dfs_dict"][df_name].shape[0]} rows AFTER applying clean_inclusion_list() func.\n"
+                    )
+
+        # 5.3 apply clean portfolio and exclusion list
+        if config["prep_config_name"] == "portfolio_deltas":
+            logger.info(
+                "\n5.3 Cleaning portfolio and exclusion lists for BRS Portfolio Delta"
+            )
+            prep_config_name = config["prep_config_name"]
+            for df_name, df in config["dfs_dict"].items():
+                if df_name == "exclusion_df":
+
+                    # cleant portfolio and exclusion list
+                    logger.info(
+                        f"""
+                        {prep_config_name}'s {df_name} had {df.shape[0]} rows BEFORE applying clean_portfolio_and_exclusion_list() func.
+                        """
+                    )
+                    df = df.apply(clean_portfolio_and_exclusion_list, axis=1)
+
+                    logger.info(
+                        f"""
+                        {prep_config_name}'s {df_name} had {df.shape[0]} rows BEFORE applying clean_portfolio_and_exclusion_list() func.
+                        """
+                    )
+                    config["dfs_dict"][df_name] = df
+
+        # 5.4. clean empty exclusion lists
+        for df_name, df in config["dfs_dict"].items():
+            prep_config_name = config["prep_config_name"]
+            # remove rows with empyt exclusion lists
+            if df_name == "exclusion_df":
+                logger.info(
+                    f"""
+                            \n5.4. Cleaning empty exclusion lists for {prep_config_name}'s {df_name}.
+                            {prep_config_name}'s {df_name} had {df.shape[0]} rows BEFORE applying clean_empty_exclusion_rows() func.
+                            """
+                )
+                df = clean_empty_exclusion_rows(df)
+                logger.info(
+                    f"""
+                            {prep_config_name}'s {df_name} had {df.shape[0]} rows AFTER applying clean_empty_exclusion_rows() func.
+                            """
+                )
+                config["dfs_dict"][df_name] = df
+
+        # 6. reoder columns for all the deltas
+        logger.info("\n6. Reordering columns for all the deltas")
+        for df_name, df in config["dfs_dict"].items():
+            logger.info(
+                f"Reordering columns for {config["prep_config_name"]}'s {df_name}"
+            )
+            df = reorder_columns(df, id_name_issuers_cols, delta_test_cols)
+            config["dfs_dict"][df_name] = df
+
+    # persist cleaned DataFrames
+    for config in prep_config:
+        for df_name, df in config["dfs_dict"].items():
+            final_key = f"{config['prep_config_name']}_{df_name}"
+            final_dfs_dict[final_key] = df
+
+    # DEBUG LOGGING - REMOVE LATER - LET'S CHECK HOW THE DATA LOOKS LIKE
+    logger.info(
+        "\n\n========== SHOW dataframes AFTER Adding Portfolio & Benchmark Information. Filtering, and Cleaning ==========\n\n"
+    )
+    for df_name, df in final_dfs_dict.items():
+
+        # logg columns for all the dfs
+        logger.info(
+            f"""
+        Columns in {df_name}:\n {df.columns.tolist()}\n
+        Number of rows in {df_name}: {df.shape[0]}\n
+        """
+        )
+        # Log if df has index and if it does the index name
+        if df.index.name:
+            logger.info(f"Index name for {df_name}: {df.index.name}")
+            logger.info(
+                f"""
+            Columns in {df_name}:\n {df.columns.tolist()}\n
+            Number of rows in {df_name}: {df.shape[0]}\n
+            """
+            )
+            # Temporarily override pandas display options
+            with pd.option_context(
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,
+                "display.width",
+                None,
+                "display.max_colwidth",
+                None,
+            ):
+                logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
+
+        else:
+            logger.info(
+                f"""
+            Columns in {df_name}:\n {df.columns.tolist()}\n
+            Number of rows in {df_name}: {df.shape[0]}\n
+            """
+            )
+            # Temporarily override pandas display options
+            with pd.option_context(
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,
+                "display.width",
+                None,
+                "display.max_colwidth",
+                None,
+            ):
+                logger.info(f"{df_name}'s head:\n{df.head()}\n\n")
 
     logger.info("\n\n================================================\n\n")
 
     # Unpack cleaned DataFrames using original names
-    delta_clarity = final_dfs_dict["clarity_deltas_delta_clarity"].copy()
+    delta_clarity = final_dfs_dict["clarity_deltas_exclusion_df"].copy()
+    delta_clarity = final_dfs_dict["clarity_deltas_inclusion_df"].copy()
     delta_ex_ptf = final_dfs_dict["portfolio_deltas_exclusion_df"].copy()
     delta_in_ptf = final_dfs_dict["portfolio_deltas_inclusion_df"].copy()
     delta_ex_bmk = final_dfs_dict["benchmark_deltas_exclusion_df"].copy()
@@ -665,8 +913,9 @@ def main(simple: bool = False, zombie: bool = False):
     # Free up memory: delete prep structure and final dict
     del prep_config, final_dfs_dict
 
-    # 6. GET STRATEGIES DFS
+    # 5. GET STRATEGIES DFS
     if simple:
+        logger.info("\n\n\n5. GETTING STRATEGIES DFS\n\n\n")
         logger.info("Getting strategies dfs")
 
         configurations = [
@@ -674,33 +923,33 @@ def main(simple: bool = False, zombie: bool = False):
                 "description": "Exclusion BRS Exclusion Analysis at the Portfolio level",
                 "var_name": "str_dfs_ex_ptf",
                 "input_df": delta_ex_ptf,
-                "exclusion_col": "exclusion_list_brs",
+                "exclusion_col": "exclusion_list",
                 "affected_col": "affected_portfolio_str",
-                "brs_source": brs_df_portfolios,
+                "brs_source": prep_brs_df_ptf,
             },
             {
                 "description": "Exclusion BRS Exclusion Analysis at the Benchmark level",
                 "var_name": "str_dfs_ex_bmk",
                 "input_df": delta_ex_bmk,
-                "exclusion_col": "exclusion_list_brs",
+                "exclusion_col": "exclusion_list",
                 "affected_col": "affected_benchmark_str",
-                "brs_source": brs_df_benchmarks,
+                "brs_source": prep_brs_df_bmk,
             },
             {
                 "description": "Exclusion BRS Inclusion Analysis at the Portfolio level",
                 "var_name": "str_dfs_in_ptf",
                 "input_df": delta_in_ptf,
-                "exclusion_col": "inclusion_list_brs",
+                "exclusion_col": "inclusion_list",
                 "affected_col": "affected_portfolio_str",
-                "brs_source": brs_df_portfolios,
+                "brs_source": prep_brs_df_ptf,
             },
             {
                 "description": "Exclusion BRS Inclusion Analysis at the Benchmark level",
                 "var_name": "str_dfs_in_bmk",
                 "input_df": delta_in_bmk,
-                "exclusion_col": "inclusion_list_brs",
+                "exclusion_col": "inclusion_list",
                 "affected_col": "affected_benchmark_str",
-                "brs_source": brs_df_benchmarks,
+                "brs_source": prep_brs_df_bmk,
             },
         ]
 
@@ -712,8 +961,8 @@ def main(simple: bool = False, zombie: bool = False):
                 input_delta_df=config["input_df"],
                 strategies_list=delta_test_cols,
                 input_df_exclusion_col=config["exclusion_col"],
-                df1_lookup_source=df_1,
-                df2_lookup_source=df_2,
+                df1_lookup_source=prep_old_clarity_df,
+                df2_lookup_source=prep_new_clarity_df,
                 brs_lookup_source=config["brs_source"],
                 overrides_df=overrides,
                 affected_portfolio_col_name=config["affected_col"],
@@ -722,9 +971,9 @@ def main(simple: bool = False, zombie: bool = False):
     else:
         pass
 
-    # 7.   Get Zombie Analysis
+    # 6.   Get Zombie Analysis
     if zombie:
-        logger.info("Getting zombie analysis df")
+        logger.info("\n\n\n6. GENERATING ZOMBIE ANALYSIS df\n\n\n")
         zombie_df = zombie_killer(
             clarity_df=df_2_copy,
             brs_carteras=brs_carteras,
@@ -734,7 +983,8 @@ def main(simple: bool = False, zombie: bool = False):
     else:
         pass
 
-    # 8 SAVE INTO EXCEL
+    # 7. SAVE INTO EXCEL
+    logger.info("\n\n\n7. SAVING DATA INTO EXCEL\n\n\n")
 
     # create dict of df and df name
     dfs_dict = {
@@ -752,14 +1002,16 @@ def main(simple: bool = False, zombie: bool = False):
     # save to excel
     if simple:
         for key, df in results_str_level_dfs.items():
-            save_excel(df, OUTPUT_DIR, file_name=f"{DATE}_{key}")
-            logger.info(f"Saved {key} to {OUTPUT_DIR}/{DATE}{key}.xlsx")
-        save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}dfs_pre_ovr_analysis")
-        logger.info(f"Saved dfs_dict to {OUTPUT_DIR}/{DATE}dfs_pre_ovr_analysis.xlsx")
+            save_excel(df, OUTPUT_DIR, file_name=f"{DATE}_{key}_preovr_analysis")
+            logger.info(
+                f"\nSaved {key} to {OUTPUT_DIR}/{DATE}_{key}_preovr_analysis.xlsx\n"
+            )
+        save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}_preovr_analysis")
+        logger.info(f"\nSaved dfs_dict to {OUTPUT_DIR}/{DATE}_preovr_analysis.xlsx\n")
 
     else:
-        save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}dfs_pre_ovr_analysis")
-        logger.info(f"Saved dfs_dict to {OUTPUT_DIR}/{DATE}dfs_pre_ovr_analysis.xlsx")
+        save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}_preovr_analysis")
+        logger.info(f"\nSaved dfs_dict to {OUTPUT_DIR}/{DATE}_preovr_analysis.xlsx\n")
 
 
 if __name__ == "__main__":
@@ -767,10 +1019,8 @@ if __name__ == "__main__":
     args = parse_arguments().parse_args()
     if args.simple:
         # generate simplify over analysis
-        logger.info("Generating simplified version of the pre-ovr analysis too")
         main(simple=True)
+        logger.info("\n\n\n FINISHED PRE-OVR ANALYSIS\n\n\n")
     else:
-        logger.info(
-            "No simple flag found! Generating only full version of the pre-ovr analysis"
-        )
         main()
+        logger.info("\n\n\n FINISHED PRE-OVR ANALYSIS\n\n\n")
