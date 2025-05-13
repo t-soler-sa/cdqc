@@ -77,6 +77,7 @@ def get_config(
     DATE_PREV = prev_date_obj.strftime("%Y%m")
 
     # Define common paths
+    DOWNLOAD_DIR = Path(r"C:\Users\n740789\Downloads")
     # REPO_DIR is derived relative to this script to get the repository's path.
     REPO_DIR = Path(r"C:\Users\n740789\Documents\clarity_data_quality_controls")
     # DATAFEED_DIR is taken from an enviroment variable (with a fallback if needed)
@@ -163,5 +164,6 @@ def get_config(
         "paths": paths,
         "OUTPUT_DIR": OUTPUT_DIR,
         "ESG_METRICS_MAP_DIR": ESG_METRICS_MAP_DIR,
+        "DOWNLOAD_DIR": DOWNLOAD_DIR,
     }
     return config
