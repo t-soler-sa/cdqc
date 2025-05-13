@@ -22,7 +22,7 @@ from scripts.utils.clarity_data_quality_control_functions import (
     finalize_delta,
     add_portfolio_benchmark_info_to_df,
     get_issuer_level_df,
-    filter_non_empty_lists,
+    filter_empty_lists,
     filter_rows_with_common_elements,
     reorder_columns,
     clean_portfolio_and_exclusion_list,
@@ -167,7 +167,7 @@ def main():
 
     # 5. FILTER & SORT DATA & GET RELEVANT DATA FOR THE ANALYSIS
     # let's use filter_non_empty_lists to remove rows with empty lists in affected_portfolio_str
-    delta_brs = filter_non_empty_lists(delta_brs, "affected_portfolio_str")
+    delta_brs = filter_empty_lists(delta_brs, "affected_portfolio_str")
 
     # pass filter_rows_with_common_elements for columns exclusion_list_brs and affected_portfolio_str
     delta_brs = filter_rows_with_common_elements(
