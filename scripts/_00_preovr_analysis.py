@@ -142,17 +142,17 @@ def main(simple: bool = False, zombie: bool = False):
     logger.info(f"IT WILL RUN STRATEGY LEVEL ANALYSIS: {simple}")
     logger.info(f"IT WILL RUN ZOMBIE ANALYSIS: {zombie}")
     # 1.    LOAD DATA
-    logger.info("\n1. LOADING DATA\n\n\n")
+    logger.info("\n\n\n1. LOADING DATA\n\n\n")
     # 1.1.  aladdin /brs data / perimeters
     logger.info("Loading BRS data")
     brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
     brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
-    crosreference = load_crossreference(CROSSREFERENCE_PATH)
+    crossreference = load_crossreference(CROSSREFERENCE_PATH)
 
     # remove duplicate and nan permid in crossreference
     logger.info("Removing duplicates and NaN values from crossreference")
-    crosreference.drop_duplicates(subset=["permid"], inplace=True)
-    crosreference.dropna(subset=["permid"], inplace=True)
+    crossreference.drop_duplicates(subset=["permid"], inplace=True)
+    crossreference.dropna(subset=["permid"], inplace=True)
 
     # get BRS data at issuer level for becnhmarks without empty aladdin_id
     brs_carteras_issuerlevel = get_issuer_level_df(brs_carteras, "aladdin_id")
@@ -170,10 +170,10 @@ def main(simple: bool = False, zombie: bool = False):
     # add aladdin_id to df_1 and df_2
     logger.info("Adding aladdin_id to clarity dfs")
     prep_old_clarity_df = prep_old_clarity_df.merge(
-        crosreference[["permid", "aladdin_id"]], on="permid", how="left"
+        crossreference[["permid", "aladdin_id"]], on="permid", how="left"
     )
     prep_new_clarity_df = prep_new_clarity_df.merge(
-        crosreference[["permid", "aladdin_id"]], on="permid", how="left"
+        crossreference[["permid", "aladdin_id"]], on="permid", how="left"
     )
 
     logger.info(
@@ -435,8 +435,8 @@ def main(simple: bool = False, zombie: bool = False):
     )
 
     for df_name, df in deltas_df_dict.items():
-        temp_pathout = OUTPUT_DIR / f"{DATE}_{df_name}_UNFILTERED.xlsx"
-        df.to_excel(temp_pathout, index=False)
+        # temp_pathout = OUTPUT_DIR / f"{DATE}_{df_name}_UNFILTERED.xlsx"
+        # df.to_excel(temp_pathout, index=False)
         logger.info(
             f"{df_name}'s index:{df.index.name}, \n{df_name}'s shape {df.shape[0]} & \ncolumns:\n {df.columns.tolist()}\n\n"
         )
@@ -557,9 +557,7 @@ def main(simple: bool = False, zombie: bool = False):
 
     logger.info("\n\n================================================\n\n")
 
-    logger.info(
-        "\n\n\n4.  ADDING PORTFOLIO & BENCHMARK INFO TO DELTAS & 5. FILTERING\n\n\n"
-    )
+    logger.info("\n\n\n4.  ADDING PORTFOLIO & BENCHMARK INFO TO DELTAS\n\n\n")
 
     for config in prep_config:
         logger.info(
@@ -586,7 +584,7 @@ def main(simple: bool = False, zombie: bool = False):
                 logger.info(f"Dropping isin column from {df_name}")
                 df.drop(columns=["isin"], inplace=True, errors="ignore")
 
-            # add new column 'ovr_dict' value using aladdin_id
+            # add new column 'ovr_list' value using aladdin_id
             logger.info(
                 f"Adding column 'ovr_list' to {config["prep_config_name"]}'s {df_name}"
             )
@@ -609,14 +607,14 @@ def main(simple: bool = False, zombie: bool = False):
         )
         if config["check_permid"]:
             for df_name, df in config["dfs_dict"].items():
-                # check if permid is in df.columns
+                # check if permid is in df.columns - if missing merge using crossreference
                 if "permid" not in df.columns:
                     logger.info(f"permid not in {df_name}")
                     logger.info(
                         f"Merging to add permid to {config["prep_config_name"]}'s {df_name}"
                     )
                     df = df.merge(
-                        crosreference[["aladdin_id", "permid"]],
+                        crossreference[["aladdin_id", "permid"]],
                         on="aladdin_id",
                         how="left",
                     )
@@ -712,10 +710,11 @@ def main(simple: bool = False, zombie: bool = False):
             "\n5. Filtering & Cleaning BRS Delta's based on affected portfolio & benchmark\n"
         )
         if config["brs_data"]:
-            logger.info(
-                f"\n5.1 Filtering Empty {config["main_parameter"]} for {config["prep_config_name"]}'s {df_name}.\n"
-            )
+
             for df_name, df in config["dfs_dict"].items():
+                logger.info(
+                    f"\n5.1 Filtering Empty {config["main_parameter"]} for {config["prep_config_name"]}'s {df_name}.\n"
+                )
                 # 5.1. filtering not empty lists
                 logger.info(
                     f"""
@@ -746,21 +745,22 @@ def main(simple: bool = False, zombie: bool = False):
                     )
                     logger.info(
                         f"""
-                        {df_name} has {df.shape[0]} after applying filter_rows_with_common_elements() func to empty {config["main_parameter"]}.
+                        {df_name} has {df.shape[0]} ROWS after applying filter_rows_with_common_elements() func to empty {config["main_parameter"]}.
                         """
                     )
                     # 5.2.2.a Clean exclusion data
                     logger.info(
                         f"""
                         \n5.2.2.a Cleaning exclusion list for overrides OK. 
-                        {df_name} had {config["dfs_dict"][df_name].shape[0]} rows BEFORE applying clean_exclusion_list_with_ovr() func.
+                        {df_name} had {df.shape[0]} rows BEFORE applying clean_exclusion_list_with_ovr() func.
                         """
                     )
                     df = clean_exclusion_list_with_ovr(df)
+                    config["dfs_dict"][df_name] = df
                     logger.info(
                         f"{df_name} has {config["dfs_dict"][df_name].shape[0]} rows AFTER applying clean_exclusion_list_with_ovr() func."
                     )
-                    config["dfs_dict"][df_name] = df
+
                 else:
                     # 5.2.b filter rows with common elements in the inclusion list & clean inclusion list
                     # 5.2.1.b filter rows with common elements in the exclusion list & clean exclusion list
@@ -806,7 +806,7 @@ def main(simple: bool = False, zombie: bool = False):
 
                     logger.info(
                         f"""
-                        {prep_config_name}'s {df_name} had {df.shape[0]} rows BEFORE applying clean_portfolio_and_exclusion_list() func.
+                        {prep_config_name}'s {df_name} had {df.shape[0]} rows AFTER applying clean_portfolio_and_exclusion_list() func.
                         """
                     )
                     config["dfs_dict"][df_name] = df
@@ -823,12 +823,12 @@ def main(simple: bool = False, zombie: bool = False):
                             """
                 )
                 df = clean_empty_exclusion_rows(df)
+                config["dfs_dict"][df_name] = df
                 logger.info(
                     f"""
                             {prep_config_name}'s {df_name} had {df.shape[0]} rows AFTER applying clean_empty_exclusion_rows() func.
                             """
                 )
-                config["dfs_dict"][df_name] = df
 
         # 6. reoder columns for all the deltas
         logger.info("\n6. Reordering columns for all the deltas")
@@ -847,7 +847,7 @@ def main(simple: bool = False, zombie: bool = False):
 
     # DEBUG LOGGING - REMOVE LATER - LET'S CHECK HOW THE DATA LOOKS LIKE
     logger.info(
-        "\n\n========== SHOW dataframes AFTER Adding Portfolio & Benchmark Information. Filtering, and Cleaning ==========\n\n"
+        "\n\n========== SHOW dataframes AFTER Adding Portfolio & Benchmark Information & Filtering, and Cleaning ==========\n\n"
     )
     for df_name, df in final_dfs_dict.items():
 
@@ -903,8 +903,8 @@ def main(simple: bool = False, zombie: bool = False):
     logger.info("\n\n================================================\n\n")
 
     # Unpack cleaned DataFrames using original names
-    delta_clarity = final_dfs_dict["clarity_deltas_exclusion_df"].copy()
-    delta_clarity = final_dfs_dict["clarity_deltas_inclusion_df"].copy()
+    delta_ex_clarity = final_dfs_dict["clarity_deltas_exclusion_df"].copy()
+    delta_in_clarity = final_dfs_dict["clarity_deltas_inclusion_df"].copy()
     delta_ex_ptf = final_dfs_dict["portfolio_deltas_exclusion_df"].copy()
     delta_in_ptf = final_dfs_dict["portfolio_deltas_inclusion_df"].copy()
     delta_ex_bmk = final_dfs_dict["benchmark_deltas_exclusion_df"].copy()
@@ -921,7 +921,7 @@ def main(simple: bool = False, zombie: bool = False):
         configurations = [
             {
                 "description": "Exclusion BRS Exclusion Analysis at the Portfolio level",
-                "var_name": "str_dfs_ex_ptf",
+                "var_name": "strategy_level_preovr_analysis_excl_ptf",
                 "input_df": delta_ex_ptf,
                 "exclusion_col": "exclusion_list",
                 "affected_col": "affected_portfolio_str",
@@ -929,15 +929,23 @@ def main(simple: bool = False, zombie: bool = False):
             },
             {
                 "description": "Exclusion BRS Exclusion Analysis at the Benchmark level",
-                "var_name": "str_dfs_ex_bmk",
+                "var_name": "strategy_level_preovr_analysis_excl_bmk",
                 "input_df": delta_ex_bmk,
                 "exclusion_col": "exclusion_list",
                 "affected_col": "affected_benchmark_str",
                 "brs_source": prep_brs_df_bmk,
             },
             {
+                "description": "Exclusion BRS Exclusion Analysis at the Benchmark level",
+                "var_name": "strategy_level_preovr_analysis_excl_clarity",
+                "input_df": delta_ex_clarity,
+                "exclusion_col": "exclusion_list",
+                "affected_col": "affected_benchmark_str",
+                "brs_source": prep_brs_df_bmk,
+            },
+            {
                 "description": "Exclusion BRS Inclusion Analysis at the Portfolio level",
-                "var_name": "str_dfs_in_ptf",
+                "var_name": "strategy_level_preovr_analysis_incl_ptf",
                 "input_df": delta_in_ptf,
                 "exclusion_col": "inclusion_list",
                 "affected_col": "affected_portfolio_str",
@@ -945,8 +953,16 @@ def main(simple: bool = False, zombie: bool = False):
             },
             {
                 "description": "Exclusion BRS Inclusion Analysis at the Benchmark level",
-                "var_name": "str_dfs_in_bmk",
+                "var_name": "strategy_level_preovr_analysis_incl_bmk",
                 "input_df": delta_in_bmk,
+                "exclusion_col": "inclusion_list",
+                "affected_col": "affected_benchmark_str",
+                "brs_source": prep_brs_df_bmk,
+            },
+            {
+                "description": "Exclusion BRS Inclusion Analysis at the Benchmark level",
+                "var_name": "strategy_level_preovr_analysis_incl_clarity",
+                "input_df": delta_in_clarity,
                 "exclusion_col": "inclusion_list",
                 "affected_col": "affected_benchmark_str",
                 "brs_source": prep_brs_df_bmk,
@@ -978,7 +994,7 @@ def main(simple: bool = False, zombie: bool = False):
             clarity_df=df_2_copy,
             brs_carteras=brs_carteras,
             brs_benchmarks=brs_benchmarks,
-            crosreference=crosreference,
+            crosreference=crossreference,
         )
     else:
         pass
@@ -990,7 +1006,8 @@ def main(simple: bool = False, zombie: bool = False):
     dfs_dict = {
         "excl_carteras": delta_ex_ptf,
         "excl_benchmarks": delta_ex_bmk,
-        "excl_clarity": delta_clarity,
+        "excl_clarity": delta_ex_clarity,
+        "incl_clarity": delta_in_clarity,
         "incl_carteras": delta_in_ptf,
         "incl_benchmarks": delta_in_bmk,
     }
@@ -1002,7 +1019,7 @@ def main(simple: bool = False, zombie: bool = False):
     # save to excel
     if simple:
         for key, df in results_str_level_dfs.items():
-            save_excel(df, OUTPUT_DIR, file_name=f"{DATE}_{key}_preovr_analysis")
+            save_excel(df, OUTPUT_DIR, file_name=f"{DATE}_{key}")
             logger.info(
                 f"\nSaved {key} to {OUTPUT_DIR}/{DATE}_{key}_preovr_analysis.xlsx\n"
             )

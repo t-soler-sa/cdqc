@@ -16,10 +16,7 @@ from scripts.utils.config import get_config
 # import relevant libraries from 00_preovr_analysis
 from scripts.utils.clarity_data_quality_control_functions import (
     prepare_dataframes,
-    compare_dataframes,
-    check_new_exclusions,
-    check_new_inclusions,
-    finalize_delta,
+    generate_delta,
     add_portfolio_benchmark_info_to_df,
     get_issuer_level_df,
     filter_empty_lists,
@@ -30,7 +27,13 @@ from scripts.utils.clarity_data_quality_control_functions import (
 
 
 # Get the common configuration for the Pre-OVR-Analysis script.
-config = get_config("noncomplieance-analysis", interactive=True)
+config = get_config(
+    "noncomplieance-analysis",
+    interactive=True,
+    gen_output_dir=True,
+    output_dir_dated=True,
+    auto_date=True,
+)
 logger = config["logger"]
 DATE = config["DATE"]
 REPO_DIR = config["REPO_DIR"]
@@ -101,7 +104,11 @@ def main():
 
     # 1.1.  aladdin /brs data / perimeters
     brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
-    crosreference = load_crossreference(CROSSREFERENCE_PATH)
+    crossreference = load_crossreference(CROSSREFERENCE_PATH)
+    # remove duplicate and nan permid in crossreference
+    logger.info("Removing duplicates and NaN values from crossreference")
+    crossreference.drop_duplicates(subset=["permid"], inplace=True)
+    crossreference.dropna(subset=["permid"], inplace=True)
     # get BRS data at issuer level for becnhmarks without empty aladdin_id
     brs_carteras_issuerlevel = get_issuer_level_df(brs_carteras, "aladdin_id")
 
@@ -111,7 +118,7 @@ def main():
     df.rename(columns=rename_dict, inplace=True)
     # add aladdin_id to df_1 and df
     logger.info("Adding aladdin_id to clarity dfs")
-    df = df.merge(crosreference[["permid", "aladdin_id"]], on="permid", how="left")
+    df = df.merge(crossreference[["permid", "aladdin_id"]], on="permid", how="left")
 
     # Load portfolios & benchmarks dicts
     (
@@ -146,10 +153,16 @@ def main():
     # START NONCOMPLIANCE ANALYSIS
     # COMPARE DATA
     logger.info("checking impact compared to BRS portfolio data")
-    delta_brs = compare_dataframes(brs_df, clarity_df)
-    delta_brs = check_new_exclusions(brs_df, clarity_df, delta_brs, suffix_level="_brs")
-    delta_brs = check_new_inclusions(brs_df, clarity_df, delta_brs, suffix_level="_brs")
-    delta_brs = finalize_delta(delta_brs, target_index="aladdin_id")
+    delta_brs = generate_delta(
+        brs_df,
+        clarity_df,
+        target_index="aladdin_id",
+        delta_analysis_str="exclusion",
+        condition_list=["EXCLUDED"],
+        delta_name_str="delta_brs_ptf",
+        filter_col="new_exclusion",
+        drop_cols=["new_inclusion", "inclusion_list"],
+    )
 
     # 4.    PREP DELTAS BEFORE SAVING
     # PREP DELTAS BEFORE SAVING
@@ -169,9 +182,9 @@ def main():
     # let's use filter_non_empty_lists to remove rows with empty lists in affected_portfolio_str
     delta_brs = filter_empty_lists(delta_brs, "affected_portfolio_str")
 
-    # pass filter_rows_with_common_elements for columns exclusion_list_brs and affected_portfolio_str
+    # pass filter_rows_with_common_elements for columns exclusion_list and affected_portfolio_str
     delta_brs = filter_rows_with_common_elements(
-        delta_brs, "exclusion_list_brs", "affected_portfolio_str"
+        delta_brs, "exclusion_list", "affected_portfolio_str"
     )
 
     # 7. SAVE TO EXCEL
@@ -180,14 +193,17 @@ def main():
     # set id_name_issuers_cols first and exclude delta_test_cols
     delta_brs = reorder_columns(delta_brs, id_name_issuers_cols, delta_test_cols)
 
-    # remove columns "new_exclusion", "new_inclusion", "inclusion_list_brs", and "affected_benchmark_str" from delta_brs
+    # remove columns "new_exclusion", "new_inclusion", "inclusion_list", and "affected_benchmark_str" from delta_brs
+    target_drop_columns = [
+        "new_exclusion",
+        "new_inclusion",
+        "inclusion_list",
+        "affected_benchmark_str",
+    ]
+    columns_to_drop = [col for col in target_drop_columns if col in delta_brs.columns]
+    logger.info(f"Dropping columns: {columns_to_drop}")
     delta_brs.drop(
-        columns=[
-            "new_exclusion",
-            "new_inclusion",
-            "inclusion_list_brs",
-            "affected_benchmark_str",
-        ],
+        columns=columns_to_drop,
         inplace=True,
     )
 

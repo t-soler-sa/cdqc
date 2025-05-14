@@ -483,13 +483,13 @@ def clean_portfolio_and_exclusion_list(
     cleaned_paired = [tup for tup in paired if tup[1] in exclusion_list]
 
     # Update affected_portfolio_str
-    row["affected_portfolio_str"] = cleaned_paired
+    row[affected_col_name] = cleaned_paired
 
     # Extract strategies from the cleaned paired tuples
     affected_strategies = {strategy for _, strategy in cleaned_paired}
 
     # Update exclusion_list
-    row["exclusion_list"] = [
+    row[exclusion_list_name] = [
         strategy for strategy in exclusion_list if strategy in affected_strategies
     ]
 
