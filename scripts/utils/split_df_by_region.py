@@ -18,7 +18,7 @@ YEAR = config["YEAR"]
 # define BASE_DIRECTORY
 # Define paths from configuration
 BASE_DIR = config["DATAFEED_DIR"]
-OUTPUT_DIR = BASE_DIR / "ficheros_tratados" / "Feed_region" / f"{DATE}"
+OUTPUT_DIR = BASE_DIR / "datafeeds_without_ovr" / "Feed_region" / f"{DATE}"
 
 
 def main(

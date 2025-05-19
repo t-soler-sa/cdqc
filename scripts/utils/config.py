@@ -81,7 +81,7 @@ def get_config(
     # REPO_DIR is derived relative to this script to get the repository's path.
     REPO_DIR = Path(r"C:\Users\n740789\Documents\clarity_data_quality_controls")
     # DATAFEED_DIR is taken from an enviroment variable (with a fallback if needed)
-    DATAFEED_DIR = Path(r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED")
+    DATAFEED_DIR = Path(r"C:\Users\n740789\Documents\Projects_local\datasets\datafeeds")
     EXCEL_BOOKS_DIR = REPO_DIR / "excel_books"
     SRI_DATA_DIR = EXCEL_BOOKS_DIR / "sri_data"
     ALADDIN_DATA_DIR = EXCEL_BOOKS_DIR / "aladdin_data"
@@ -104,16 +104,18 @@ def get_config(
         / f"{DATE}_df_issuer_level_with_ovr.csv",
         "DF_WOVR_PATH_DIR": DATAFEED_DIR / "datafeeds_with_ovr",
         "CURRENT_DF_WOUTOVR_PATH": DATAFEED_DIR
-        / "ficheros_tratados"
+        / "datafeeds_without_ovr"
         / f"{YEAR}"
-        / f"{DATE}01_Equities_feed_IssuerLevel_sinOVR.csv",
-        "PROCESSED_DFS_WOUTOVR_PATH": DATAFEED_DIR / "ficheros_tratados" / f"{YEAR}",
+        / f"{DATE}01_df_issuer_level_without_ovr.csv",
+        "PROCESSED_DFS_WOUTOVR_PATH": DATAFEED_DIR
+        / "datafeeds_without_ovr"
+        / f"{YEAR}",
         "CROSSREFERENCE_PATH": ALADDIN_DATA_DIR
         / "crossreference"
         / f"Aladdin_Clarity_Issuers_{DATE}01.csv",
         "BMK_PORTF_STR_PATH": ALADDIN_DATA_DIR
         / "bmk_portf_str"
-        / f"{DATE}_strategies_snt world_portf_bmks.xlsx",
+        / f"{DATE}_strategies_snt_world_portf_bmks.xlsx",
         "OVR_PATH": SRI_DATA_DIR / "overrides" / "overrides_db.xlsx",
         "COMMITTEE_PATH": REPO_DIR
         / "excel_books"

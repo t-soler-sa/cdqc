@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 
 DATE = datetime.now().strftime("%Y%m%d")
-IDIR = r"C:\Users\n740789\Documents\Projects_local\DataSets\DATAFEED\raw_dataset\2025\20250401_Production\20250401_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv"
+IDIR = r"C:\Users\n740789\Documents\Projects_local\datasets\datafeeds\raw_dataset\2025\20250401_Production\20250401_Equities_feed_new_strategies_filtered_old_names_iso_permId.csv"
 OFILE = rf"C:\Users\n740789\Documents\clarity_data_quality_controls\notebooks\output\{DATE}_inveractivo.xlsx"
 
 TARGET_ISINS = [

@@ -20,7 +20,7 @@ logger = set_up_log(script_name)
 
 DATA_DIR = Path(
     r"C:\Users\n740789\Documents\Projects_local\DataSets"
-    r"\DATAFEED\ficheros_tratados\2025"
+    r"\datafeeds\datafeeds_without_ovr\2025"
 )
 
 EXCEL_OUT = Path(r"C:\Users\n740789\Downloads\lost_issuers_2025.xlsx")
