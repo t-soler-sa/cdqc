@@ -12,7 +12,6 @@ import pandas as pd
 
 
 from scripts.utils.dataloaders import (
-    load_overrides,
     load_clarity_data,
     load_crossreference,
 )
@@ -37,17 +36,8 @@ CROSSREFERENCE_PATH = paths["CROSSREFERENCE_PATH"]
 
 # Define base directories
 base_dir = Path("C:/Users/n740789/Documents/Projects_local/DataSets")
-logger.info("Loading crossreference")
-crossreference = load_crossreference(CROSSREFERENCE_PATH)
-# remove duplicate and nan permid in crossreference
-logger.info("Removing duplicates and NaN values from crossreference")
-crossreference.drop_duplicates(subset=["permid"], inplace=True)
-crossreference.dropna(subset=["permid"], inplace=True)
-datafeed_dir = base_dir / "DATAFEED/datafeeds_with_ovr"
+datafeed_dir = base_dir / "datafeeds/datafeeds_with_ovr"
 datafeed_path = datafeed_dir / f"{DATE}_df_issuer_level_with_ovr.csv"
-# LOAD DATASETS & MODIFY COLUMN NAMES
-# read datafeed
-logger.info("Loading datafeed")
 
 datafeed_columns = [
     "permid",
@@ -57,13 +47,6 @@ datafeed_columns = [
     "str_004_asec",
     "str_007_sect",
 ]
-
-datafeed = pd.read_csv(
-    datafeed_path,
-    usecols=datafeed_columns,
-    dtype=str,
-)
-logger.info("Datafeed loaded")
 
 
 # add remove warnign for openpyxl
@@ -102,7 +85,14 @@ def reorder_columns(df):
     return df[new_order]
 
 
-def analysis(input_file: str, output_file: str, datafeed_col: list, date: str):
+def analysis(
+    input_file: str,
+    output_file: str,
+    datafeed_col: list,
+    date: str,
+    datafeed: pd.DataFrame,
+    crossreference: pd.DataFrame,
+):
     logger.info(f"\n\nGenerating Impact Analysis for {input_file}")
     df = datafeed[datafeed_col].copy()
     # read aladdin workbench excel file
@@ -113,6 +103,10 @@ def analysis(input_file: str, output_file: str, datafeed_col: list, date: str):
 
     portfolio.rename(columns={"Issuer ID": "aladdin_id"}, inplace=True)
     benchmark.rename(columns={"Issuer ID": "aladdin_id"}, inplace=True)
+    # convert aladdin_id to string
+    portfolio["aladdin_id"] = portfolio["aladdin_id"].astype(str)
+    benchmark["aladdin_id"] = benchmark["aladdin_id"].astype(str)
+
     logger.info("Aladdin Workbench file loaded")
 
     # PROCESS DATASETS
@@ -129,10 +123,10 @@ def analysis(input_file: str, output_file: str, datafeed_col: list, date: str):
     # add datafeed columns to portfolio and benchmark with suffixes "_current" and "_new"
     logger.info(f"adding datafeed columns to portfolio and benchmark")
     portfolio = pd.merge(
-        portfolio, df, how="left", on="permid", suffixes=("_current", "_new")
+        portfolio, df, how="left", on="aladdin_id", suffixes=("_current", "_new")
     )
     benchmark = pd.merge(
-        benchmark, df, how="left", on="permid", suffixes=("_current", "_new")
+        benchmark, df, how="left", on="aladdin_id", suffixes=("_current", "_new")
     )
     logger.info("datafeed columns added")
 
@@ -141,6 +135,29 @@ def analysis(input_file: str, output_file: str, datafeed_col: list, date: str):
     portfolio = reorder_columns(portfolio)
     benchmark = reorder_columns(benchmark)
     logger.info("columns sorted")
+
+    for df_name, df in zip(["portfolio", "bencmark"], [portfolio, benchmark]):
+        len_permid_current = df["permid_current"].notna().sum()
+        len_permid_new = df["permid_new"].notna().sum()
+
+        if len_permid_current != len_permid_new:
+            logger.warning(
+                f"For {df_name} the number of permid_current ({len_permid_current}) != number of permid_new ({len_permid_new})"
+            )
+            # Determine base column name
+            base_col = "permid"
+            col_current = f"{base_col}_current"
+            col_new = f"{base_col}_new"
+
+            # Combine the two columns into one, preferring '_current' if it exists
+            df[base_col] = df[col_current].combine_first(df[col_new])
+
+            # Drop the original two columns
+            df.drop(columns=[col_current, col_new], inplace=True)
+
+        else:
+            df.rename(columns={"permid_current": "permid"}, inplace=True)
+            df.drop(columns=["permid_new"], inplace=True)
 
     # SAVE DATASETS TO EXCEL FILE
     logger.info("Saving dataframe to Excel")
@@ -152,7 +169,14 @@ def analysis(input_file: str, output_file: str, datafeed_col: list, date: str):
     del df
 
 
-def process_directory(input_dir: str, output_dir: str, datafeed_col: list, date: str):
+def process_directory(
+    input_dir: str,
+    output_dir: str,
+    datafeed_col: list,
+    date: str,
+    datafeed: pd.DataFrame,
+    crossreference: pd.DataFrame,
+):
     for file in os.listdir(input_dir):
         if file.endswith(".xlsx"):
             if any(
@@ -160,18 +184,37 @@ def process_directory(input_dir: str, output_dir: str, datafeed_col: list, date:
                 for portfolio_id in ["FPB01158", "FPH00457", "EPH00107"]
             ):
                 logger.info(f"Processing {file} with str 004 instead of str 007")
-                datafeed_col = ["permid", "sustainability_rating", "str_004_asec"]
+                datafeed_col = [
+                    "permid",
+                    "aladdin_id",
+                    "sustainability_rating",
+                    "str_004_asec",
+                ]
                 input_file = os.path.join(input_dir, file)
                 output_file = os.path.join(
                     output_dir, file.replace(".xlsx", "_analysis.xlsx")
                 )
-                analysis(input_file, output_file, datafeed_col, date)
+                analysis(
+                    input_file,
+                    output_file,
+                    datafeed_col,
+                    date,
+                    datafeed,
+                    crossreference,
+                )
             else:
                 input_file = os.path.join(input_dir, file)
                 output_file = os.path.join(
                     output_dir, file.replace(".xlsx", "_analysis.xlsx")
                 )
-                analysis(input_file, output_file, datafeed_col, date)
+                analysis(
+                    input_file,
+                    output_file,
+                    datafeed_col,
+                    date,
+                    datafeed,
+                    crossreference,
+                )
 
 
 def main():
@@ -181,6 +224,22 @@ def main():
     input_base = os.path.join(base_dir, "aladdin_input")
     output_base = os.path.join(base_dir, "analysis_output")
 
+    logger.info("Loading crossreference")
+    crossreference = load_crossreference(CROSSREFERENCE_PATH)
+    # remove duplicate and nan permid in crossreference
+    logger.info("Removing duplicates and NaN values from crossreference")
+    crossreference.drop_duplicates(subset=["permid"], inplace=True)
+    crossreference.dropna(subset=["permid"], inplace=True)
+    # convert permid and aladdin to string
+    crossreference["permid"] = crossreference["permid"].astype(str)
+    crossreference["aladdin_id"] = crossreference["aladdin_id"].astype(str)
+    # LOAD DATASETS & MODIFY COLUMN NAMES
+    datafeed = load_clarity_data(datafeed_path, target_cols=datafeed_columns)
+    # add aladdin_id to datafeed from crossreference
+    datafeed = datafeed.merge(
+        crossreference[["permid", "aladdin_id"]], on="permid", how="left"
+    )
+
     # Ensure output directories exist
     for dir_name in ["art8_analysis", "esg_analysis", "sustainable_analysis"]:
         os.makedirs(os.path.join(output_base, dir_name), exist_ok=True)
@@ -189,24 +248,30 @@ def main():
     process_directory(
         os.path.join(input_base, "art_8_basico"),
         os.path.join(output_base, "art8_analysis"),
-        ["permid", "art_8_basicos"],
+        ["permid", "aladdin_id", "art_8_basicos"],
         date,
+        datafeed=datafeed,
+        crossreference=crossreference,
     )
 
     # Process ESG
     process_directory(
         os.path.join(input_base, "ESG"),
         os.path.join(output_base, "esg_analysis"),
-        ["permid", "sustainability_rating", "str_001_s"],
+        ["permid", "aladdin_id", "sustainability_rating", "str_001_s"],
         date,
+        datafeed=datafeed,
+        crossreference=crossreference,
     )
 
     # Process Sustainable
     process_directory(
         os.path.join(input_base, "Sustainable"),
         os.path.join(output_base, "sustainable_analysis"),
-        ["permid", "sustainability_rating", "str_007_sect"],
+        ["permid", "aladdin_id", "sustainability_rating", "str_007_sect"],
         date,
+        datafeed=datafeed,
+        crossreference=crossreference,
     )
 
     logger.info("Script completed")
