@@ -895,7 +895,7 @@ def get_strategy_file(
 
     # Enumerate files and keep those that satisfy the pattern
     pattern = re.compile(
-        r"(?P<date>\d{8})_strategies_snt world_portf_bmks\.xlsx$", re.IGNORECASE
+        r"(?P<date>\d{8})_strategies_snt_world_portf_bmks\.xlsx$", re.IGNORECASE
     )
 
     candidates: List[Tuple[str, Path]] = []
