@@ -209,14 +209,16 @@ def load_crossreference(file_path: Path) -> pd.DataFrame:
     return df
 
 
-def load_overrides(file_path: Path, target_cols: list[str] = None) -> pd.DataFrame:
+def load_overrides(
+    file_path: Path, target_cols: list[str] = None, drop_active: bool = True
+) -> pd.DataFrame:
     """Load overrides from a CSV file."""
     if target_cols is None:
         # Default columns to load if not specified
         target_cols = [
             "clarityid",
             "permid",
-            "brs_id",
+            "aladdin_id",
             "ovr_target",
             "ovr_value",
             "ovr_active",
@@ -230,7 +232,7 @@ def load_overrides(file_path: Path, target_cols: list[str] = None) -> pd.DataFra
                 dtype={
                     "clarityid": str,
                     "permid": str,
-                    "brs_id": str,
+                    "aladdin_id": str,
                     "ovr_target": str,
                     "ovr_value": str,
                     "ovr_active": bool,
@@ -251,12 +253,15 @@ def load_overrides(file_path: Path, target_cols: list[str] = None) -> pd.DataFra
         logger.exception(f"Failed to load overrides from: {file_path}")
         raise
 
-    # return only active overrides
-    df = df[df["ovr_active"] == True].copy()
-    # remove column "ovr_active"
-    df.drop(columns=["ovr_active"], inplace=True)
-
-    return df
+    if drop_active:
+        # return only active overrides
+        df = df[df["ovr_active"] == True].copy()
+        # remove column "ovr_active"
+        df.drop(columns=["ovr_active"], inplace=True)
+        return df
+    else:
+        # keep column "ovr_active"
+        return df[df["ovr_active"] == True].copy()
 
 
 def load_portfolios(
