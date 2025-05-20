@@ -190,7 +190,9 @@ def main(simple: bool = False, zombie: bool = False):
 
     # overrides = load_overrides(OVR_PATH)
     logger.info("Loading overrides data with beta version of the ovr db")
-    overrides = load_overrides(OVR_BETA_PATH)
+    overrides = load_overrides(
+        OVR_PATH
+    )  # changed to the original one just in case for the time being
     # rename column brs_id to aladdin_id
     if "brs_id" in overrides.columns:
         overrides.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
