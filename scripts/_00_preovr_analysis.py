@@ -192,7 +192,8 @@ def main(simple: bool = False, zombie: bool = False):
     logger.info("Loading overrides data with beta version of the ovr db")
     overrides = load_overrides(OVR_BETA_PATH)
     # rename column brs_id to aladdin_id
-    overrides.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
+    if "brs_id" in overrides.columns:
+        overrides.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
     # rename value column "ovr_target" using rename_dict if value is string
     overrides["ovr_target"] = overrides["ovr_target"].apply(
         lambda x: (
