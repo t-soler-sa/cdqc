@@ -147,9 +147,10 @@ def main():
     logger.info("Loading overrides and crossreference data...")
     overrides_df = load_overrides(
         OVR_PATH,
-        target_cols=["permid", "brs_id", "ovr_target", "ovr_value", "ovr_active"],
+        target_cols=["permid", "aladdin_id", "ovr_target", "ovr_value", "ovr_active"],
     )
-    overrides_df.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
+    if "brs_id" in overrides_df.columns:
+        overrides_df.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
     crossreference = load_crossreference(CROSSREFERENCE_PATH)
     # remove duplicate and nan permid in crossreference
     logger.info("Removing duplicates and NaN values from crossreference")
