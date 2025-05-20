@@ -45,7 +45,7 @@ for arg in "$@"; do
             ;;
         *)
             echo "Unknown argument: $arg"
-            echo "Valid options after the date are: 'simple', 'only_preovr'"
+            echo "Valid options after the date are: 'simple', 'only_preovr', and or 'zombie'"
             exit 1
             ;;
     esac
