@@ -3,7 +3,11 @@ import warnings
 
 import pandas as pd
 
-from scripts.utils.dataloaders import load_overrides
+from scripts.utils.dataloaders import (
+    load_overrides,
+    load_crossreference,
+    load_clarity_data,
+)
 from scripts.utils.config import get_config
 
 # Ignore workbook warnings
@@ -17,6 +21,8 @@ DATE = config["DATE"]
 paths = config["paths"]
 SRI_DATA_DIR = config["SRI_DATA_DIR"]
 OVR_PATH = paths["OVR_PATH"]
+CROSSREFERENCE_PATH = paths["CROSSREFERENCE_PATH"]
+DF_PATH = paths["CURRENT_DF_WOUTOVR_PATH"]
 OUT_DIR = SRI_DATA_DIR / "ovr_lists_sambau_infinity" / DATE
 # create OUT_DIR if does not exist
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -36,10 +42,104 @@ overrides_mapping = {
     "CS_002_EC": "cs_002_ec",
 }
 
+target_cols_override = [
+    "clarityid",
+    "ovr_target",
+    "ovr_value",
+    "ovr_active",
+    "aladdin_id",
+    "permid",
+    "permid",
+    "issuer_name",
+]
+
 # 2. LOAD OVERRIDES
-overrides_df = load_overrides(
-    OVR_PATH, target_cols=["clarityid", "ovr_target", "ovr_value", "ovr_active"]
-)
+overrides_df = load_overrides(OVR_PATH, target_cols=target_cols_override)
+
+
+# if empty values in colum clarityid load crossreference
+def id_to_str(s: pd.Series) -> pd.Series:
+    """
+    Normalise identifier columns to a pandas StringDtype:
+    * keep NaN/NA as NA
+    * convert floats/ints to integer-looking strings
+      (150236668.0 → "150236668")
+    * leave existing strings untouched
+    """
+    out = s.astype("string").str.replace(  # <- guarantees StringDtype, keeps NA
+        r"\.0$", "", regex=True
+    )  # drop trailing '.0' if any
+    return out
+
+
+for col in ("clarityid", "permid"):
+    # convert col to datatype string
+    overrides_df[col] = id_to_str(overrides_df[col])
+    overrides_df[col] = overrides_df[col].replace("", pd.NA)
+
+need_clarityid_only = overrides_df["clarityid"].isna() & overrides_df["permid"].notna()
+need_permid_and_clid = overrides_df["clarityid"].isna() & overrides_df["permid"].isna()
+# ── 2. optional look-ups ───────────────────────────────────────────────────────
+if need_clarityid_only.any() or need_permid_and_clid.any():
+    # permid → clarityid map
+    clarity_df = load_clarity_data(
+        DF_PATH,
+        target_cols=["clarityid", "permid"],
+    )
+    clarity_df["permid"] = id_to_str(clarity_df["permid"])
+    clarity_df["clarityid"] = id_to_str(clarity_df["clarityid"])
+
+    clr_map = (
+        clarity_df.dropna(subset=["permid", "clarityid"])
+        .drop_duplicates("permid")
+        .set_index("permid")["clarityid"]
+    )  # dtype is already String, no floats!
+
+if need_permid_and_clid.any():
+    xref_df = load_crossreference(CROSSREFERENCE_PATH)[["aladdin_id", "permid"]]
+    xref_df["permid"] = id_to_str(xref_df["permid"])
+
+    permid_map = (
+        xref_df.dropna(subset=["permid"])
+        .drop_duplicates("aladdin_id")
+        .set_index("aladdin_id")["permid"]
+    )
+
+    overrides_df.loc[need_permid_and_clid, "permid"] = overrides_df.loc[
+        need_permid_and_clid, "aladdin_id"
+    ].map(permid_map)
+
+# second pass: permid → clarityid
+still_missing_clid = overrides_df["clarityid"].isna() & overrides_df["permid"].notna()
+overrides_df.loc[still_missing_clid, "clarityid"] = overrides_df.loc[
+    still_missing_clid, "permid"
+].map(clr_map)
+
+# ── 3. final normalisation and logging ────────────────────────────────────────
+overrides_df["clarityid"] = id_to_str(overrides_df["clarityid"])  # <-- safety net
+
+for _, row in overrides_df.iterrows():
+    if pd.isna(row["clarityid"]):
+        if pd.isna(row["permid"]):
+            logger.warning(
+                "NO clarityid & NO permid for '%s' (Aladdin %s)",
+                row["issuer_name"],
+                row["aladdin_id"],
+            )
+        else:
+            logger.warning(
+                "NO clarityid for '%s' (Aladdin %s) even after lookup",
+                row["issuer_name"],
+                row["aladdin_id"],
+            )
+    else:
+        pass
+        # logger.info(
+        #    "clarityid %s assigned to '%s' (Aladdin %s)",
+        #    row["clarityid"],
+        #    row["issuer_name"],
+        #    row["aladdin_id"],
+        # )
 
 
 # 3. Define main function
