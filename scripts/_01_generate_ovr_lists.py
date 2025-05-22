@@ -9,6 +9,7 @@ from scripts.utils.dataloaders import (
     load_clarity_data,
 )
 from scripts.utils.config import get_config
+from scripts.utils.filter_log import main as filter_log
 
 # Ignore workbook warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
@@ -26,6 +27,22 @@ DF_PATH = paths["CURRENT_DF_WOUTOVR_PATH"]
 OUT_DIR = SRI_DATA_DIR / "ovr_lists_sambau_infinity" / DATE
 # create OUT_DIR if does not exist
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# define aux function if empty values in colum clarityid load crossreference
+def id_to_str(s: pd.Series) -> pd.Series:
+    """
+    Normalise identifier columns to a pandas StringDtype:
+    * keep NaN/NA as NA
+    * convert floats/ints to integer-looking strings
+      (150236668.0 → "150236668")
+    * leave existing strings untouched
+    """
+    out = s.astype("string").str.replace(  # <- guarantees StringDtype, keeps NA
+        r"\.0$", "", regex=True
+    )  # drop trailing '.0' if any
+    return out
+
 
 # 1. CONSTANTS
 overrides_mapping = {
@@ -55,21 +72,6 @@ target_cols_override = [
 
 # 2. LOAD OVERRIDES
 overrides_df = load_overrides(OVR_PATH, target_cols=target_cols_override)
-
-
-# if empty values in colum clarityid load crossreference
-def id_to_str(s: pd.Series) -> pd.Series:
-    """
-    Normalise identifier columns to a pandas StringDtype:
-    * keep NaN/NA as NA
-    * convert floats/ints to integer-looking strings
-      (150236668.0 → "150236668")
-    * leave existing strings untouched
-    """
-    out = s.astype("string").str.replace(  # <- guarantees StringDtype, keeps NA
-        r"\.0$", "", regex=True
-    )  # drop trailing '.0' if any
-    return out
 
 
 for col in ("clarityid", "permid"):
@@ -118,32 +120,52 @@ overrides_df.loc[still_missing_clid, "clarityid"] = overrides_df.loc[
 # ── 3. final normalisation and logging ────────────────────────────────────────
 overrides_df["clarityid"] = id_to_str(overrides_df["clarityid"])  # <-- safety net
 
+permids_assigned_to_clarityid = {}
+no_clarityid_no_permid = {}
+no_clarityid = {}
 for _, row in overrides_df.iterrows():
-    if pd.isna(row["clarityid"]):
-        if pd.isna(row["permid"]):
-            logger.warning(
-                "NO clarityid & NO permid for '%s' (Aladdin %s)",
-                row["issuer_name"],
-                row["aladdin_id"],
-            )
+    aladdin_id = row["aladdin_id"]
+    issuer_name = row["issuer_name"]
+    claritid = row["clarityid"]
+    permid = row["permid"]
+    if aladdin_id not in (
+        permids_assigned_to_clarityid or no_clarityid_no_permid or no_clarityid
+    ):
+
+        if pd.isna(claritid):
+            if pd.isna(permid):
+                no_clarityid_no_permid[aladdin_id] = issuer_name
+
+            else:
+                no_clarityid[aladdin_id] = issuer_name
         else:
-            logger.warning(
-                "NO clarityid for '%s' (Aladdin %s) even after lookup",
-                row["issuer_name"],
-                row["aladdin_id"],
-            )
-    else:
-        pass
-        # logger.info(
-        #    "clarityid %s assigned to '%s' (Aladdin %s)",
-        #    row["clarityid"],
-        #    row["issuer_name"],
-        #    row["aladdin_id"],
-        # )
+            permids_assigned_to_clarityid[permid] = issuer_name
+
+for issuser_name, aladdin_id in no_clarityid_no_permid.items():
+    logger.warning(
+        f"NoClarityNoPermid | NO clarityid & NO permid for {issuser_name} - aladdin_id: {aladdin_id}"
+    )
+for issuer_name, aladdin_id in no_clarityid.items():
+    logger.warning(
+        f"NoClarity | NO clarityid for {issuer_name} - aladdin_id: {aladdin_id}) even after lookup"
+    )
+
+for permid, issuer_name in permids_assigned_to_clarityid.items():
+    logger.warning(
+        f"PermidInstead | For {issuer_name} permid {permid}) was assigned instead of clarityid"
+    )
+
+del (
+    permids_assigned_to_clarityid,
+    no_clarityid_no_permid,
+    no_clarityid,
+)  # free up memory
 
 
 # 3. Define main function
 def main():
+    strategies = "\n".join(str(s) for s in overrides_df.ovr_target.unique())
+    logger.info(f"Generating overrides lists for strategies:\n{strategies}")
     grouped_ovr = overrides_df.groupby("ovr_target")
     logger.info(f"Grouped overrides by override target")
     for ovr_target, group in grouped_ovr:
@@ -171,4 +193,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    logger.info("Script finished")
+    logger.info("Script finished. Filtering logs")
+    filter_log()
