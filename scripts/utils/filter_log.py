@@ -1,11 +1,18 @@
 import re
 from pathlib import Path
+from datetime import datetime
+
+# import logging
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def remove_duplicate_warnings(input_path, output_path):
-    print(f"Checking path: {input_path}")
+    logger.info(f"Checking path: {input_path}")
     if not input_path.exists():
-        print("❌ File does not exist!")
+        logger.warning("❌ File does not exist!")
         return
     seen = set()
     pattern = re.compile(r"WARNING\s*-\s*(.*)")
@@ -18,16 +25,28 @@ def remove_duplicate_warnings(input_path, output_path):
             if match:
                 message = match.group(1).strip()
                 if message not in seen:
+                    # Post-process message
+                    marker = "in <module>()] - "
+                    if marker in message:
+                        message = message.split(marker, 1)[1].strip()
                     outfile.write(message + "\n")
                     seen.add(message)
             else:
-                print("  ❌ No match for WARNING")
+                pass
+
+
+def main():
+    # today date in yyyymmdd format
+    today = datetime.now().strftime("%Y%m%d")
+    path_dir = Path(
+        rf"C:\Users\n740789\Documents\clarity_data_quality_controls\log\{today}_logs\01-generate-ovr-lists"
+    )
+    path_in = path_dir / f"01-generate-ovr-lists_{today}.log"
+    logger.info(f"Filtering log: {path_in}")
+    path_out = path_dir / "01-generate-ovr-filtered.log"
+    remove_duplicate_warnings(path_in, path_out)
+    logger.info(f"Filtered log saved to: {path_out}")
 
 
 if __name__ == "__main__":
-    path_dir = Path(
-        r"C:\Users\n740789\Documents\clarity_data_quality_controls\log\20250521_logs\01-generate-ovr-lists"
-    )
-    path_in = path_dir / "01-generate-ovr-lists_20250521.log"
-    path_out = path_dir / "01-generate-ovr-filtered.log"
-    remove_duplicate_warnings(path_in, path_out)
+    main()
