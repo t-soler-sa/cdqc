@@ -39,13 +39,20 @@ for arg in "$@"; do
             echo "Only pre override analysis will be generated"
             SCRIPTS=("_00_preovr_analysis.py")
             ;;
+        no_dups)
+            echo "We will skip the remove duplicates script!"
+            SCRIPTS=(
+                "utils/update_ovr_db_active_col.py"
+                "_00_preovr_analysis.py"
+                )
+            ;;
         zombie)
             echo "Zombie parameter provided! Zombie analysis will be generated"
             ZOMBIE_FLAG="--zombie"
             ;;
         *)
             echo "Unknown argument: $arg"
-            echo "Valid options after the date are: 'simple', 'only_preovr', and or 'zombie'"
+            echo "Valid options after the date are: 'simple', 'zombie', 'only_preovr' or 'no_dups' - but not only_preovr and no_dups at the same time"
             exit 1
             ;;
     esac
