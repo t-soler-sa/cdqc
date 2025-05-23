@@ -1,3 +1,5 @@
+# monthly_missing_issuers.py
+
 """
 Quick check of “lost” issuers month-to-month in a folder of ESG CSVs,
 plus an Excel summary of the missing PERMIDs / issuer names.
@@ -12,18 +14,28 @@ Assumptions
 from pathlib import Path
 import pandas as pd
 
-from .set_up_log import set_up_log
+from datetime import datetime
+
+
+from .config import get_config
 
 # -------------------------------------------------
 script_name = Path(__file__).stem
-logger = set_up_log(script_name)
+
+config = get_config(
+    "monthly_missing_issuers_clarity_datafeed_analysis",
+    auto_date=False,
+    fixed_date="202506",
+)
+logger = config["logger"]
 
 DATA_DIR = Path(
-    r"C:\Users\n740789\Documents\Projects_local\DataSets"
-    r"\datafeeds\datafeeds_without_ovr\2025"
+    r"C:\Users\n740789\Documents\Projects_local\datasets\datafeeds\datafeeds_without_ovr\2025"
 )
 
-EXCEL_OUT = Path(r"C:\Users\n740789\Downloads\lost_issuers_2025.xlsx")
+date = datetime.now().strftime("%Y%m%d")
+
+EXCEL_OUT = Path(rf"C:\Users\n740789\Downloads\{date}_lost_issuers.xlsx")
 # -------------------------------------------------
 
 
@@ -48,6 +60,8 @@ def main() -> None:
     # Collect the deltas so we can write all sheets in one go
     excel_sheets: dict[str, pd.DataFrame] = {}
 
+    summary_logs = []
+
     for prev_file, next_file in zip(files, files[1:]):
         prev_month, next_month = month_tag(prev_file), month_tag(next_file)
 
@@ -57,9 +71,11 @@ def main() -> None:
         missing_ids = prev_df.index.difference(next_df.index)
         n_missing = len(missing_ids)
 
-        logger.info(
-            f"From {prev_month} to {next_month}, " f"{n_missing} issuer(s) were lost"
+        logger_message = (
+            f"From {prev_month} to {next_month}, " f"{n_missing} issuers were lost"
         )
+        logger.info(logger_message)
+        summary_logs.append(logger_message)
 
         if n_missing == 0:
             continue  # nothing to record this round
@@ -85,9 +101,13 @@ def main() -> None:
         with pd.ExcelWriter(EXCEL_OUT, engine="xlsxwriter") as writer:
             for sheet, df in excel_sheets.items():
                 df.to_excel(writer, sheet_name=sheet, index=False)
-        logger.info(f"Excel summary written to {EXCEL_OUT}")
+        logger.info(f"Excel summary written to {EXCEL_OUT}\n")
     else:
         logger.info("No missing issuers detected; Excel file was not created.")
+
+    logger.info("\n\nSummary of missing issuers:\n\n")
+    for msg in summary_logs:
+        logger.info(msg)
 
 
 if __name__ == "__main__":
