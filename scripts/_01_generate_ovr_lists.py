@@ -138,8 +138,12 @@ for _, row in overrides_df.iterrows():
 
             else:
                 no_clarityid[aladdin_id] = issuer_name
-        else:
+        elif claritid == permid:
+            # this means that the permid was assigned to the clarityid
             permids_assigned_to_clarityid[permid] = issuer_name
+        else:
+            # there is a clarityid and permid and they are different so everything is fine no need to log anything
+            pass
 
 for issuser_name, aladdin_id in no_clarityid_no_permid.items():
     logger.warning(
