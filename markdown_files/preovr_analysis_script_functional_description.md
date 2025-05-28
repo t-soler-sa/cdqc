@@ -28,11 +28,12 @@
 ### 2.1. Override Activity
 #### 2.1.1. High-level Description / Summary
 
-Before proceeding with finding the delta of exclusion and delta of inclusion, we need to analyse if the data points in our override columns are still relevant or not.
+Before proceeding with finding the delta of exclusion and delta of inclusion (i.e. which companies are newly excluded or included for each strategy), we need to analyse if the data points in our override columns are still relevant or not.
 
-Namely, if the latest datum delivered by Clarity is equal to the datum saved/stored in the override column, we consider that this override is not relevant anymore, in other words **it is not active.** Thus, for instanance, if for a given issuer/company we had the value "EXCLUDED" in the column OVR_CONTROV_STR001, and in the new delivery from Clarity, the value in the column STR_001_S is also "EXCLUDED" we understand that override needs to be "deactivated".
+Namely, if the latest datum delivered by Clarity is equal to the datum saved/stored in the override column, we consider that this override is not relevant anymore, in other words **it is not active.** Thus, for instanance, if for a given issuer/company we had the value "EXCLUDED" in the column OVR_CONTROV_STR001, and in the new delivery from Clarity, the value in the column STR_001_S is also "EXCLUDED" we understand that override needs to be "deactivated". 
 
-In that case we would remove the
+In that case we need to do 2 things:
+    1. we would remove the
 
 ### 2.2. Pre-Override Analysis
 #### 2.2.1. High-level Description / Summary
@@ -41,3 +42,5 @@ In that case we would remove the
 ### 3.1. Output Audit Tables
 ### 3.2. Business Description of Audit Tables: what's in the Autdit Pre-Overrides Analysis Tables
 ### 3.3. Audit Tables Structure: Columns/Atrributes & Datatypes 
+
+
