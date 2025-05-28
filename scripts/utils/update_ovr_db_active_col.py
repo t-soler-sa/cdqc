@@ -18,6 +18,7 @@ from scripts.utils.dataloaders import (
     load_overrides,
     load_crossreference,
 )
+from scripts.utils.clarity_data_quality_control_functions import log_df_head_compact
 
 # config script
 config = get_config("update-ovr-db-active-col", interactive=False, gen_output_dir=False)
