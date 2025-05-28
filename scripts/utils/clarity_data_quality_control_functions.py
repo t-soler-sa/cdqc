@@ -6,12 +6,13 @@ Module to define functions & constans to carry Clarity.ai's data quality control
 
 """
 
+import inspect
 import logging
+import re
+from collections import defaultdict
+from itertools import chain
 from pathlib import Path
 from typing import List, Tuple, Union
-from itertools import chain
-from collections import defaultdict
-import re
 
 import numpy as np
 import pandas as pd
@@ -38,7 +39,7 @@ delta_test_cols = [
 brs_test_cols = ["aladdin_id"] + delta_test_cols
 
 
-# DEFINE FUNCTIONS
+# DEFINE CDQC FUNCTIONS
 def prepare_dataframes(
     base_df: pd.DataFrame, new_df: pd.DataFrame, target_index: str = "permid"
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -916,3 +917,85 @@ def get_strategy_file(
 
     date_str, path = max(candidates, key=lambda t: t[0])
     return path, date_str
+
+
+# DEFINE LOGGER FUNCTIONS
+# --------------------------------------------------------------------------- #
+# Internal resolver
+# --------------------------------------------------------------------------- #
+def _resolve_logger(explicit: Union[None, "logging.Logger"]) -> "logging.Logger":
+    """
+    Priority order:
+      1. Explicit `logger` argument (if supplied)
+      2. A global `logger` object in the *caller’s* module
+      3. A logger named after the caller’s module (`logging.getLogger(caller)`)
+      4. This module’s own logger (`logger`)
+    """
+    if explicit is not None:
+        return explicit
+
+    stack = inspect.stack()
+    # Frame[0] = _resolve_logger, Frame[1] = log_df_head_compact, Frame[2] = caller
+    for frame_info in stack[2:]:
+        mod = inspect.getmodule(frame_info.frame)
+        if mod is None:
+            continue
+        mod_logger = mod.__dict__.get("logger")
+        if isinstance(mod_logger, logging.Logger):
+            return mod_logger
+        # If no `logger` variable, try a named logger for the module
+        if mod.__name__:  # can be None in rare REPL situations
+            return logging.getLogger(mod.__name__)
+
+    # Absolute last resort
+    return logger
+
+
+# --------------------------------------------------------------------------- #
+# Public API
+# --------------------------------------------------------------------------- #
+def log_df_head_compact(
+    df: pd.DataFrame,
+    df_name: str = "df",
+    n: int = 10,
+    logger: Union[None, "logging.Logger"] = None,  # default now None → resolver
+) -> None:
+    """
+    Logs the first *n* rows of `df` in a compact Markdown table.
+
+    The function automatically chooses an appropriate logger:
+      * Caller’s `logger` object → highest priority
+      * Logger named after caller’s module
+      * Helper-module logger (fallback)
+
+    Example
+    -------
+    >>> log_df_head_compact(portfolio_df, df_name="portfolio")
+
+    Produces:
+
+    ```
+    current look of df portfolio
+
+    **col1**|**col2**|...|**colN**
+    :-----:|:-----:|...|:-----:
+    ...
+    ```
+    """
+    logger = _resolve_logger(logger)
+
+    # ---------- Build compact Markdown table ---------------------------------
+    header = "|".join(f"**{col}**" for col in df.columns)
+    divider = "|".join(":-----:" for _ in df.columns)
+
+    body_rows = []
+    head_df = df.head(n)
+    for _, row in head_df.iterrows():
+        # stringify values; replace NaN with empty string for cleaner output
+        body_rows.append("|".join("" if pd.isna(v) else str(v) for v in row.values))
+
+    table_md = "\n".join([header, divider, *body_rows])
+
+    # ---------- Assemble final message ---------------------------------------
+    message = f"\n\n\ncurrent look of df {df_name}\n\n{table_md}\n\n"
+    logger.info(message)
