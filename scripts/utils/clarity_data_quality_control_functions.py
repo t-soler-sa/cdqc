@@ -715,12 +715,36 @@ def process_data_by_strategy(
 
     # Part 2: Prepare lookup DataFrames - create indexed copies to avoid modifying originals
     # get list uniques permid & aladdin_ids from input_delta_df
-    try:
-        target_permid_list = input_delta_df["permid"].dropna().unique().tolist()
-        target_aladdin_id_list = input_delta_df["aladdin_id"].dropna().unique().tolist()
-    except KeyError as e:
-        logger.error(f"Missing expected column in input_delta_df: {e}")
-        raise
+    # 2.1  Pull the two columns only if they exist
+    target_permid_list = (
+        input_delta_df["permid"].dropna().unique().tolist()
+        if "permid" in input_delta_df.columns
+        else []
+    )
+    target_aladdin_id_list = (
+        input_delta_df["aladdin_id"].dropna().unique().tolist()
+        if "aladdin_id" in input_delta_df.columns
+        else []
+    )
+
+    # 2️.2  Warn about any individual column that is missing
+    if "permid" not in input_delta_df.columns:
+        logger.warning(
+            "Column 'permid' not found in input_delta_df – continuing with aladdin_id only."
+        )
+    if "aladdin_id" not in input_delta_df.columns:
+        logger.warning(
+            "Column 'aladdin_id' not found in input_delta_df – continuing with permid only."
+        )
+
+    # 2.3  Final guard – abort if *both* keys are unavailable / blank
+    if not target_permid_list and not target_aladdin_id_list:
+        msg = (
+            "input_delta_df does not contain any non-null values for either "
+            "'permid' or 'aladdin_id'. At least one of them is required."
+        )
+        logger.error(msg)
+        raise ValueError(msg)
 
     # We will loop through the lookup DataFrames to create new DataFrames using only the target permids & issuer_ids
     lookup_configs = [
