@@ -12,10 +12,12 @@ import re
 from collections import defaultdict
 from itertools import chain
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Any, Mapping, Optional
+import json
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_scalar
 
 # Module-level logger
 logger = logging.getLogger(__name__)
@@ -147,7 +149,7 @@ def generate_delta(
     df2: pd.DataFrame,  # new_df that you get from othe function prepare_dataframes
     test_col: List[str] = delta_test_cols,
     condition_list: List[str] = [],  # either ["EXCLUDED"] or ["OK", "FLAG"]
-    delta_analysis_str: str = "",  # either "exclusion" or "inclusion"
+    delta_analysis_str: str = "",  # either "exclusion" or "inclusion", "flag"
     get_inc_excl: bool = True,  # if False, skip step 2 and return after comparison
     delta_name_str: str = "delta",  # name of the delta DataFrame
     target_index: str = "permid",  # index to be used for the DataFrame
@@ -379,13 +381,89 @@ def filter_rows_with_common_elements(df, col1, col2):
     return df[mask].copy()
 
 
-def reorder_columns(df: pd.DataFrame, keep_first: list[str], exclude: list[str] = None):
-    if exclude is None:
-        exclude = set()
-    return df[
-        keep_first
-        + [col for col in df.columns if col not in keep_first and col not in exclude]
+def reorder_columns(
+    df: pd.DataFrame,
+    keep_first: List[str],
+    exclude: Optional[List[str]] = None,
+    keep_last: Optional[List[str]] = None,
+    logger: Union[None, "logging.Logger"] = None,  # default now None → resolver
+) -> pd.DataFrame:
+    """
+    Re-order a DataFrame’s columns.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+    keep_first : list[str]
+        Columns that must come first, in the exact order given.
+    exclude : list[str] | None
+        Columns that must be removed entirely.
+    keep_last : list[str] | None
+        Columns that must come last, in the exact order given.
+    logger : logging.Logger or None, default None
+        Explicit logger to use; if None, `_resolve_logger` selects one.
+    """
+    logger = _resolve_logger(logger)
+
+    exclude = set(exclude or [])
+    keep_last = keep_last or []
+    # ── 1. Bail out early on an empty-column frame ────────────────────────────
+    if df.shape[1] == 0:  # 0 columns → nothing to reorder
+        logger.warning(
+            "reorder_columns – skipped: DataFrame has no columns "
+            "(rows=%d). Upstream step removed them.",
+            df.shape[0],
+        )
+        return df
+
+    # ── 2. Normal logic (exactly what you had, just guarded) ─────────────────
+
+    # ——— validation ————————————————————————————————————————————————
+    missing_first = [c for c in keep_first if c not in df.columns]
+    missing_last = [c for c in keep_last if c not in df.columns]
+    missing_excl = [c for c in exclude if c not in df.columns]
+
+    if missing_first or missing_last or missing_excl:
+        logger.error(
+            "reorder_columns -- at least one requested column is absent.\n"
+            "  keep_first missing: %s\n"
+            "  keep_last  missing: %s\n"
+            "  exclude    missing: %s\n"
+            "  DataFrame columns: %s",
+            missing_first,
+            missing_last,
+            missing_excl,
+            list(df.columns),
+        )
+        raise KeyError(
+            "Missing column(s) while re-ordering:\n"
+            f"  keep_first missing: {missing_first}\n"
+            f"  keep_last  missing: {missing_last}\n"
+            f"  exclude    missing: {missing_excl}"
+        )
+
+    # ——— build final order ————————————————————————————————————————————
+    middle = [
+        col
+        for col in df.columns
+        if col not in keep_first and col not in exclude and col not in keep_last
     ]
+
+    # sort middle alphabetically
+    middle.sort()
+
+    new_order = keep_first + middle + keep_last
+
+    logger.debug(
+        "reorder_columns -- successful.\n"
+        "  keep_first: %s\n  exclude: %s\n  keep_last: %s\n  final_order: %s",
+        keep_first,
+        list(exclude),
+        keep_last,
+        new_order,
+    )
+
+    return df[new_order]
 
 
 # CLEANING FUNCTIONS
@@ -991,11 +1069,91 @@ def log_df_head_compact(
     body_rows = []
     head_df = df.head(n)
     for _, row in head_df.iterrows():
-        # stringify values; replace NaN with empty string for cleaner output
-        body_rows.append("|".join("" if pd.isna(v) else str(v) for v in row.values))
+        safe_row = []
+        for v in row.values:
+            if is_scalar(v) and pd.isna(v):
+                safe_row.append("")
+            else:
+                try:
+                    safe_row.append(str(v))
+                except Exception:
+                    safe_row.append("<?>")
+        body_rows.append("|".join(safe_row))
 
     table_md = "\n".join([header, divider, *body_rows])
 
     # ---------- Assemble final message ---------------------------------------
     message = f"\n\n\ncurrent look of df {df_name}\n\n{table_md}\n\n"
+    logger.info(message)
+
+
+def log_dict_compact(
+    mapping: Mapping[Any, Any],
+    dict_name: str = "dict",
+    n: int = 10,
+    logger: Union[None, "logging.Logger"] = None,  # default now None → resolver
+    *,
+    indent: int = 4,
+    sort_keys: bool = False,
+) -> None:
+    """
+    Logs the first *n* key-value pairs of `mapping` in pretty-printed JSON.
+
+    The function automatically chooses an appropriate logger:
+      * Caller’s `logger` object → highest priority
+      * Logger named after caller’s module
+      * Helper-module logger (fallback)
+
+    Parameters
+    ----------
+    mapping : Mapping
+        Any dict-like object whose items you want to inspect.
+    dict_name : str, default "dict"
+        Label used in the log header.
+    n : int, default 10
+        Number of entries to show.
+    logger : logging.Logger or None, default None
+        Explicit logger to use; if None, `_resolve_logger` selects one.
+    indent : int, default 4
+        Passed straight through to ``json.dumps``.
+    sort_keys : bool, default False
+        Passed straight through to ``json.dumps``.
+
+    Example
+    -------
+    >>> sample = {"a": 1, "b": 2, "c": 3}
+    >>> log_dict_compact(sample, dict_name="sample")
+
+    Produces:
+
+    ```
+    current look of dict sample
+
+    {
+        "a": 1,
+        "b": 2,
+        "c": 3
+    }
+    ```
+    """
+    logger = _resolve_logger(logger)
+
+    # ---------- Slice to the first *n* items --------------------------------
+    if n is not None and n >= 0:
+        first_items = list(mapping.items())[:n]
+    else:  # n < 0 means "all"
+        first_items = list(mapping.items())
+
+    compact_dict = {k: v for k, v in first_items}
+
+    # Make sure everything is JSON-serialisable; fall back to ``str``.
+    json_repr = json.dumps(
+        compact_dict,
+        indent=indent,
+        sort_keys=sort_keys,
+        default=str,  # handles non-serialisable objects gracefully
+    )
+
+    # ---------- Assemble final message ---------------------------------------
+    message = f"\n\n\ncurrent look of dict {dict_name}\n\n{json_repr}\n\n"
     logger.info(message)
