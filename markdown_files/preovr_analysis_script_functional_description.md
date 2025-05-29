@@ -37,6 +37,9 @@ In that case we need to do 2 things:
 
 ### 2.2. Pre-Override Analysis
 #### 2.2.1. High-level Description / Summary
+#### 2.2.2. Key Methods / Process / Functions
+
+##### - a. process_data_by_strategy
 
 ## 3. Output Data
 ### 3.1. Output Audit Tables
