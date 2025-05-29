@@ -1080,6 +1080,10 @@ def main(simple: bool = False, zombie: bool = False):
 
         for config in configurations:
             logger.info(f"Getting {config['description']}")
+            input_df = config["input_df"]
+            if input_df.empty:
+                logger.info("Skipping %s – delta is empty.", config["var_name"])
+                continue
             results_str_level_dfs[config["var_name"]] = process_data_by_strategy(
                 input_delta_df=config["input_df"],
                 strategies_list=delta_test_cols,
