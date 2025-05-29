@@ -1,11 +1,6 @@
-import argparse
-import logging
 import os
-import time
 import warnings
 from contextlib import contextmanager
-from datetime import datetime
-from functools import wraps
 from pathlib import Path
 
 import pandas as pd
@@ -16,11 +11,6 @@ from scripts.utils.dataloaders import (
     load_crossreference,
 )
 from scripts.utils.config import get_config
-
-import sys
-
-# print(sys.path)
-# print(">>> Running the REAL _02_apply_ovr.py from:", __file__)
 
 
 # Ignore workbook warnings
@@ -89,7 +79,6 @@ def analysis(
     input_file: str,
     output_file: str,
     datafeed_col: list,
-    date: str,
     datafeed: pd.DataFrame,
     crossreference: pd.DataFrame,
 ):
@@ -202,6 +191,56 @@ def process_directory(
                     datafeed,
                     crossreference,
                 )
+            elif any(
+                portfolio_id in file
+                for portfolio_id in [
+                    "FIG02787",
+                ]
+            ):
+                logger.info(
+                    f"Processing {file}, Santander Responsabilidad Solidario, with str 002"
+                )
+                datafeed_col = [
+                    "permid",
+                    "aladdin_id",
+                    "str_002_ec",
+                ]
+                input_file = os.path.join(input_dir, file)
+                output_file = os.path.join(
+                    output_dir, file.replace(".xlsx", "_analysis.xlsx")
+                )
+                analysis(
+                    input_file,
+                    output_file,
+                    datafeed_col,
+                    date,
+                    datafeed,
+                    crossreference,
+                )
+            elif any(
+                portfolio_id in file
+                for portfolio_id in [
+                    "FIH00529",
+                ]
+            ):
+                logger.info(f"Processing {file}, Inveractivo Confianza, with str 005")
+                datafeed_col = [
+                    "permid",
+                    "aladdin_id",
+                    "str_005_ec",
+                ]
+                input_file = os.path.join(input_dir, file)
+                output_file = os.path.join(
+                    output_dir, file.replace(".xlsx", "_analysis.xlsx")
+                )
+                analysis(
+                    input_file,
+                    output_file,
+                    datafeed_col,
+                    date,
+                    datafeed,
+                    crossreference,
+                )
             else:
                 input_file = os.path.join(input_dir, file)
                 output_file = os.path.join(
@@ -246,7 +285,7 @@ def main():
 
     # Process Art 8 Basico
     process_directory(
-        os.path.join(input_base, "art_8_basico"),
+        os.path.join(input_base, "art8"),
         os.path.join(output_base, "art8_analysis"),
         ["permid", "aladdin_id", "art_8_basicos"],
         date,
@@ -256,7 +295,7 @@ def main():
 
     # Process ESG
     process_directory(
-        os.path.join(input_base, "ESG"),
+        os.path.join(input_base, "esg"),
         os.path.join(output_base, "esg_analysis"),
         ["permid", "aladdin_id", "sustainability_rating", "str_001_s"],
         date,
@@ -266,9 +305,19 @@ def main():
 
     # Process Sustainable
     process_directory(
-        os.path.join(input_base, "Sustainable"),
+        os.path.join(input_base, "sustainable"),
         os.path.join(output_base, "sustainable_analysis"),
         ["permid", "aladdin_id", "sustainability_rating", "str_007_sect"],
+        date,
+        datafeed=datafeed,
+        crossreference=crossreference,
+    )
+
+    # Process Responsable
+    process_directory(
+        os.path.join(input_base, "sustainable"),
+        os.path.join(output_base, "responsable"),
+        ["permid", "aladdin_id", "str_002_ec", "str_005_ec"],
         date,
         datafeed=datafeed,
         crossreference=crossreference,
