@@ -146,10 +146,13 @@ def main():
     # load data
 
     df_clarity = load_clarity_data(df_path, target_cols=clarity_test_col)
+    log_df_head_compact(df_clarity, df_name="df_clarity")
     overrides = load_overrides(
         overrides_path, target_cols=target_cols_overrides, drop_active=False
     )
+    log_df_head_compact(overrides, df_name="overrides")
     troubles_overrides = find_conflicting_columns(overrides)
+    log_df_head_compact(troubles_overrides, df_name="troubles_overrides")
 
     logger.info(
         f"\ntroubles_overrides first 10 rows is {troubles_overrides.head(10)}\n"
@@ -160,19 +163,22 @@ def main():
     # save back columns for backup
     overrides_copy = overrides.copy()
     crossreference = load_crossreference(crossreference_path)
+    log_df_head_compact(crossreference, df_name="crossreference_raw")
     logger.info("Removing duplicates and NaN values from crossreference")
     crossreference = crossreference.dropna(subset=["permid"]).drop_duplicates(
         subset=["permid"]
     )
+    log_df_head_compact(crossreference, df_name="crossreference_cleaned")
     # set permid in crossreference as str
     crossreference["permid"] = crossreference["permid"].apply(
         lambda x: str(x) if pd.notna(x) else x
     )
+
     # add aladdin_id to df_clarity from crossreference
     df_clarity = df_clarity.merge(
         crossreference[["permid", "aladdin_id"]], on="permid", how="left"
     )
-
+    log_df_head_compact(df_clarity, df_name="df_clarity_with_aladdin_id")
     # set permid in df_clarity & overrides as str
     logger.info("Setting permid in df_clarity & overrides as str - to avoid issues")
     df_clarity["aladdin_id"] = df_clarity["aladdin_id"].apply(
@@ -225,9 +231,11 @@ def main():
     # update active status of overrides
     logger.info("updating overrides active status")
     overrides = update_override_active(overrides, df_clarity_filtered)
+    log_df_head_compact(overrides, df_name="overrides_updated")
 
     # RETURN DF OF OVERRIDES THAT HAS BEEN DEACTIVATED
     deactivated_overrides = overrides[overrides["ovr_active"] == False]
+    log_df_head_compact(deactivated_overrides, df_name="deactivated_overrides")
     # log length of deactivated overrides
     logger.info(f"Number of deactivated overrides: {len(deactivated_overrides)}")
 
