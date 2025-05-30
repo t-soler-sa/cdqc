@@ -300,7 +300,7 @@ def get_category_detail_code(metric_category, metric_name, provider):
 
 
 def generate_metric_id(row):
-    return f"'{provider_codes.get(row['data_provider'],'99')}{category_codes.get(row['metric_category'],'99')}{get_topic_code(get_theme_code(row['metric_name']))}{get_theme_code(row['metric_name'])}{get_category_detail_code(row['metric_category'],row['metric_name'],row['data_provider'])}{data_type_codes.get(row['metric_type'],'99')}"
+    return f"{provider_codes.get(row['data_provider'],'99')}{category_codes.get(row['metric_category'],'99')}{get_topic_code(get_theme_code(row['metric_name']))}{get_theme_code(row['metric_name'])}{get_category_detail_code(row['metric_category'],row['metric_name'],row['data_provider'])}{data_type_codes.get(row['metric_type'],'99')}"
 
 
 def main():
