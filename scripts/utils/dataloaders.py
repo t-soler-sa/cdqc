@@ -177,6 +177,16 @@ def load_aladdin_data(file_path: Path, sheet_name: str) -> pd.DataFrame:
         logger.info(f"Cleaning columns and converting data types for {sheet_name}")
         df = clean_and_convert(df)
     except Exception:
+        logger.error(
+            f"""
+            Failed to load BRS/Aladdin's {sheet_name} data from {file_path}.\n
+            Please, download the files from Aladdin's Explore.\n
+            You can find the necessary data on the user Tristan Soler's Workspace named 'carteras_download'.\n
+            There inside the workspace select the tab 'strategies_snt_world_portf_bmks' and after chosing the relevante date export to Excel.\n
+            Remember to follow the naming convention for the file: yyyymm_202506_strategies_snt_world_portf_bmks.xlsx\n
+            where yyyymm is the date in the name of the datafeed file you are analysing, not the actual date of the analysis.
+            """
+        )
         logger.exception(f"Failed to load {sheet_name} data from {file_path}")
         raise
 

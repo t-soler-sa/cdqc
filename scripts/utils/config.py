@@ -1,5 +1,6 @@
 # config.py
 import sys
+import os
 from pathlib import Path
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -77,9 +78,9 @@ def get_config(
     DATE_PREV = prev_date_obj.strftime("%Y%m")
 
     # Define common paths
-    DOWNLOAD_DIR = Path(r"C:\Users\n740789\Downloads")
+    DOWNLOAD_DIR = Path(os.path.expanduser("~/Downloads"))
     # REPO_DIR is derived relative to this script to get the repository's path.
-    REPO_DIR = Path(r"C:\Users\n740789\Documents\clarity_data_quality_controls")
+    REPO_DIR = Path(__file__).resolve().parents[2]
     # DATAFEED_DIR is taken from an enviroment variable (with a fallback if needed)
     DATAFEED_DIR = Path(r"C:\Users\n740789\Documents\Projects_local\datasets\datafeeds")
     EXCEL_BOOKS_DIR = REPO_DIR / "excel_books"
