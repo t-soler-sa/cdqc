@@ -14,10 +14,12 @@ logger = config["logger"]
 # Define Date
 DATE = config["DATE"]
 YEAR = config["YEAR"]
+paths = config["paths"]
 
 # define BASE_DIRECTORY
 # Define paths from configuration
 BASE_DIR = config["DATAFEED_DIR"]
+BACK_UP_DIR = paths["CURRENT_DF_WOUTOVR_SEC_PATH"]
 OUTPUT_DIR = BASE_DIR / "datafeeds_without_ovr" / "Feed_region" / f"{DATE}"
 
 
@@ -71,4 +73,7 @@ def main(
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except TypeError:
+        main(df_path=BACK_UP_DIR)
