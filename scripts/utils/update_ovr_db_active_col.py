@@ -10,6 +10,7 @@ from pathlib import Path
 import sys
 
 import pandas as pd
+import numpy as np
 from pandas.api.types import is_scalar
 
 from scripts.utils.config import get_config
@@ -59,32 +60,36 @@ target_cols_overrides = [
 
 # Define Regular functions
 def update_df_value_column(
-    overrides: pd.DataFrame, df_clarity_filtered: pd.DataFrame
+    overrides: pd.DataFrame,
+    df_clarity_filtered: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Updates the 'df_value' column in the overrides DataFrame using values
-    from the df_clarity_filtered DataFrame based on matching 'aladdin_id' and 'ovr_target'.
-
-    Parameters:
-    - overrides: DataFrame containing override entries with 'aladdin_id' and 'ovr_target' columns.
-    - df_clarity_filtered: Filtered DataFrame from Clarity data with columns including 'aladdin_id'.
-
-    Returns:
-    - A new DataFrame with the updated 'df_value' column.
+    Replace overrides['df_value'] with the value that is currently in
+    the (deduplicated) Clarity feed, matched on aladdin_id + ovr_target.
     """
-    # Melt df_clarity_filtered to long format for easier matching
-    clarity_melted = df_clarity_filtered.melt(
+
+    # ── 1.  Melt feed, keep only non-null values ────────────────────────────────
+    clarity_long = df_clarity_filtered.melt(
         id_vars="aladdin_id", var_name="ovr_target", value_name="clarity_value"
-    )
+    ).dropna(subset=["clarity_value"])
 
-    # Merge to bring in the matching clarity value
-    overrides_updated = overrides.merge(
-        clarity_melted, how="left", on=["aladdin_id", "ovr_target"]
-    )
+    # ── 2.  Detect duplicates BEFORE the merge  ────────────────────────────────
+    dup_mask = clarity_long.duplicated(["aladdin_id", "ovr_target"], keep=False)
+    if dup_mask.any():
+        raise ValueError(
+            "[DQ] duplicate aladdin_id / ovr_target pairs in clarity feed:\n"
+            f"{clarity_long.loc[dup_mask].head()}"
+        )
 
-    # Update the df_value column only where clarity_value is present
-    overrides["df_value"] = overrides_updated["clarity_value"].combine_first(
-        overrides["df_value"]
+    # ── 3.  Merge and update, but preserve the original index ─────────────────
+    clarity_map = clarity_long.set_index(["aladdin_id", "ovr_target"])["clarity_value"]
+
+    # vectorised lookup without changing the row order or index
+    overrides_idx = list(zip(overrides["aladdin_id"], overrides["ovr_target"]))
+    new_vals = clarity_map.reindex(overrides_idx).values
+
+    overrides["df_value"] = np.where(
+        pd.notna(new_vals), new_vals, overrides["df_value"]
     )
 
     return overrides
@@ -146,13 +151,25 @@ def main():
     # load data
 
     df_clarity = load_clarity_data(df_path, target_cols=clarity_test_col)
-    log_df_head_compact(df_clarity, df_name="df_clarity")
+    df_clarity.loc[:, "permid"] = df_clarity.permid.astype(
+        str
+    )  # ensure permid is str type
+
+    # print row with permid 5065365677
+    if "5065365677" in df_clarity["permid"].values:
+        logger.info(
+            f"\nRow with permid 5065365677:\n{df_clarity[df_clarity['permid'] == '5065365677']}"
+        )
+    else:
+        logger.warning("\nPermid 5065365677 not found in df_clarity.")
+
+    # log_df_head_compact(df_clarity, df_name="df_clarity")
     overrides = load_overrides(
         overrides_path, target_cols=target_cols_overrides, drop_active=False
     )
-    log_df_head_compact(overrides, df_name="overrides")
+    # log_df_head_compact(overrides, df_name="overrides")
     troubles_overrides = find_conflicting_columns(overrides)
-    log_df_head_compact(troubles_overrides, df_name="troubles_overrides")
+    # log_df_head_compact(troubles_overrides, df_name="troubles_overrides")
 
     logger.info(
         f"\ntroubles_overrides first 10 rows is {troubles_overrides.head(10)}\n"
@@ -163,12 +180,12 @@ def main():
     # save back columns for backup
     overrides_copy = overrides.copy()
     crossreference = load_crossreference(crossreference_path)
-    log_df_head_compact(crossreference, df_name="crossreference_raw")
+    # log_df_head_compact(crossreference, df_name="crossreference_raw")
     logger.info("Removing duplicates and NaN values from crossreference")
     crossreference = crossreference.dropna(subset=["permid"]).drop_duplicates(
         subset=["permid"]
     )
-    log_df_head_compact(crossreference, df_name="crossreference_cleaned")
+    # log_df_head_compact(crossreference, df_name="crossreference_cleaned")
     # set permid in crossreference as str
     crossreference["permid"] = crossreference["permid"].apply(
         lambda x: str(x) if pd.notna(x) else x
@@ -218,7 +235,7 @@ def main():
         r"C:\Users\n740789\Documents\clarity_data_quality_controls\excel_books\sri_data\overrides"
     )
     current_date = datetime.now().strftime("%Y%m%d")
-    output_file = base_path / "overrides_db_beta.xlsx"
+    output_file = base_path / f"{current_date}_{DATE}_overrides_db_beta.xlsx"
     backup_file = base_path / "overrides_db_backup" / f"{DATE}_override_db.xlsx"
     deactivated_overrides_file = (
         base_path / f"{current_date}_{DATE}_deactivated_overrides.xlsx"
@@ -235,7 +252,7 @@ def main():
 
     # RETURN DF OF OVERRIDES THAT HAS BEEN DEACTIVATED
     deactivated_overrides = overrides[overrides["ovr_active"] == False]
-    log_df_head_compact(deactivated_overrides, df_name="deactivated_overrides")
+    # log_df_head_compact(deactivated_overrides, df_name="deactivated_overrides")
     # log length of deactivated overrides
     logger.info(f"Number of deactivated overrides: {len(deactivated_overrides)}")
 
@@ -245,7 +262,7 @@ def main():
     )
     overrides.to_excel(output_file, index=False)
     overrides_copy.to_excel(backup_file, index=False)
-    deactivated_overrides.to_excel(deactivated_overrides_file, index=False)
+    # deactivated_overrides.to_excel(deactivated_overrides_file, index=False)
 
 
 if __name__ == "__main__":
