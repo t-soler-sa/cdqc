@@ -149,19 +149,10 @@ def find_conflicting_columns(
 
 def main():
     # load data
-
     df_clarity = load_clarity_data(df_path, target_cols=clarity_test_col)
     df_clarity.loc[:, "permid"] = df_clarity.permid.astype(
         str
     )  # ensure permid is str type
-
-    # print row with permid 5065365677
-    if "5065365677" in df_clarity["permid"].values:
-        logger.info(
-            f"\nRow with permid 5065365677:\n{df_clarity[df_clarity['permid'] == '5065365677']}"
-        )
-    else:
-        logger.warning("\nPermid 5065365677 not found in df_clarity.")
 
     # log_df_head_compact(df_clarity, df_name="df_clarity")
     overrides = load_overrides(
