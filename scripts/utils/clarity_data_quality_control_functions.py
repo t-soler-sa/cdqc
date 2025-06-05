@@ -1181,3 +1181,57 @@ def log_dict_compact(
     # ---------- Assemble final message ---------------------------------------
     message = f"\n\n\ncurrent look of dict {dict_name}\n\n{json_repr}\n\n"
     logger.info(message)
+
+
+# --------------------------------------------------------------------------- #
+# Helper function to correct corrupted issuer_id/aladdin_ids
+# --------------------------------------------------------------------------- #
+
+"""
+Utility helpers for working with identifier columns.
+
+Functions
+---------
+pad_identifiers(series: pd.Series, width: int = 6) -> pd.Series
+    Pads every value in *series* on the left with zeros until it
+    reaches *width* characters.  Missing values are preserved.
+"""
+
+
+def pad_identifiers(series: pd.Series, width: int = 6) -> pd.Series:
+    """
+    Return a copy of *series* in which every identifier is a string of
+    exactly *width* characters, padded on the left with zeros.
+
+    Parameters
+    ----------
+    series : pd.Series
+        The column to clean.  May contain strings or numbers (or a mix).
+    width : int, default 6
+        Desired total length after padding.
+
+    Notes
+    -----
+    * ``pd.NA`` / ``NaN`` / ``None`` are left untouched.
+    * Any numeric values are converted to integers first, so ``364`` →
+      ``"364"`` → ``"000364"``.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from id_tools import pad_identifiers
+    >>> s = pd.Series(["000364", 98734, None])
+    >>> pad_identifiers(s)
+    0    000364
+    1    098734
+    2      <NA>
+    dtype: string
+    """
+    # Convert to the pandas “string” dtype (preserves missing values cleanly)
+    s = series.astype("string")
+
+    # Remove any trailing “.0” Excel might have introduced (e.g. 364.0)
+    s = s.str.replace(r"\.0$", "", regex=True)
+
+    # Pad with zeros on the left
+    return s.str.zfill(width)
