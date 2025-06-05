@@ -19,7 +19,10 @@ from scripts.utils.dataloaders import (
     load_overrides,
     load_crossreference,
 )
-from scripts.utils.clarity_data_quality_control_functions import log_df_head_compact
+from scripts.utils.clarity_data_quality_control_functions import (
+    log_df_head_compact,
+    pad_identifiers,
+)
 
 # config script
 config = get_config("update-ovr-db-active-col", interactive=False, gen_output_dir=False)
@@ -28,7 +31,11 @@ DATE = config["DATE"]
 paths = config["paths"]
 df_path = paths["CURRENT_DF_WOUTOVR_PATH"]
 overrides_path = paths["OVR_PATH"]
+overrides_dir_path = overrides_path.parent
 crossreference_path = paths["CROSSREFERENCE_PATH"]
+brs_issuer_data_dir = config["BRS_ISSUER_DATA_DIR_PATH"]
+DATE_STAMP = datetime.now().strftime("%Y%m%d")
+brs_issuer_data_file: Path = brs_issuer_data_dir / f"{DATE_STAMP}_brs_issuer_data.csv"
 
 clarity_test_col = [
     "permid",
@@ -148,7 +155,28 @@ def find_conflicting_columns(
 
 
 def main():
-    # load data
+
+    # load brs issuer data in ptf and bkm
+    logger.info(f"Loading BRS issuer data from {brs_issuer_data_file}")
+    if not brs_issuer_data_file.exists():
+        logger.error(f"BRS issuer data file {brs_issuer_data_file} does not exist.")
+        sys.exit(1)
+
+    brs_issuer_data = pd.read_csv(
+        brs_issuer_data_file,
+        usecols=["issuer_id", "ultimate_issuer_id"],
+        dtype="str",
+        low_memory=False,
+    )
+
+    brs_issuer_data.rename(columns={"issuer_id": "aladdin_id"}, inplace=True)
+    brs_issuer_data["aladdin_id"] = brs_issuer_data["aladdin_id"].apply(
+        lambda x: str(x) if pd.notna(x) else x
+    )
+    brs_issuer_data["aladdin_id"] = pad_identifiers(brs_issuer_data["aladdin_id"])
+    brs_issuer_data.drop_duplicates(subset=["aladdin_id"], inplace=True)
+
+    # load clarity data
     df_clarity = load_clarity_data(df_path, target_cols=clarity_test_col)
     df_clarity.loc[:, "permid"] = df_clarity.permid.astype(
         str
@@ -158,6 +186,7 @@ def main():
     overrides = load_overrides(
         overrides_path, target_cols=target_cols_overrides, drop_active=False
     )
+    overrides["aladdin_id"] = pad_identifiers(overrides["aladdin_id"])
     # log_df_head_compact(overrides, df_name="overrides")
     troubles_overrides = find_conflicting_columns(overrides)
     # log_df_head_compact(troubles_overrides, df_name="troubles_overrides")
@@ -168,8 +197,6 @@ def main():
 
     logger.info(f"There are {len(troubles_overrides)} conflicting rows in overrides\n")
 
-    # save back columns for backup
-    overrides_copy = overrides.copy()
     crossreference = load_crossreference(crossreference_path)
     # log_df_head_compact(crossreference, df_name="crossreference_raw")
     logger.info("Removing duplicates and NaN values from crossreference")
@@ -222,15 +249,8 @@ def main():
     logger.info(f"Size df_clarity_filterd is {df_clarity_filtered.shape[0]}")
 
     # define output paths
-    base_path = Path(
-        r"C:\Users\n740789\Documents\clarity_data_quality_controls\excel_books\sri_data\overrides"
-    )
     current_date = datetime.now().strftime("%Y%m%d")
-    output_file = base_path / f"{current_date}_{DATE}_overrides_db_beta.xlsx"
-    backup_file = base_path / "overrides_db_backup" / f"{DATE}_override_db.xlsx"
-    deactivated_overrides_file = (
-        base_path / f"{current_date}_{DATE}_deactivated_overrides.xlsx"
-    )
+    output_file = overrides_dir_path / f"{current_date}_{DATE}_overrides_db_beta.xlsx"
 
     # update active column df_value of overrides with data from df_clarity
     logger.info("Updating overrides df_value column")
@@ -247,12 +267,29 @@ def main():
     # log length of deactivated overrides
     logger.info(f"Number of deactivated overrides: {len(deactivated_overrides)}")
 
-    # save the updated overrides to the output file
-    logger.info(
-        f"Saving updated overrides to {output_file}\nand backup to {backup_file}"
+    # add ultimate_issuer_id from brs_issuer_data to overrides
+    logger.info("Adding ultimate_issuer_id from brs_issuer_data to overrides")
+    overrides = overrides.merge(
+        brs_issuer_data[["aladdin_id", "ultimate_issuer_id"]],
+        on="aladdin_id",
+        how="left",
     )
+
+    # place column ultimate_issuer_id behind aladdin_id
+    cols = overrides.columns.tolist()
+    ultimate_issuer_id_index = cols.index("ultimate_issuer_id")
+    aladdin_id_index = cols.index("aladdin_id")
+    if ultimate_issuer_id_index < aladdin_id_index:
+        # Move ultimate_issuer_id to the right of aladdin_id
+        cols.insert(aladdin_id_index + 1, cols.pop(ultimate_issuer_id_index))
+        overrides = overrides[cols]
+    else:
+        logger.info("ultimate_issuer_id is already after aladdin_id")
+
+    # save the updated overrides to the output file
+    logger.info(f"Saving updated overrides to {output_file}")
+
     overrides.to_excel(output_file, index=False)
-    overrides_copy.to_excel(backup_file, index=False)
     # deactivated_overrides.to_excel(deactivated_overrides_file, index=False)
 
 
