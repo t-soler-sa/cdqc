@@ -86,6 +86,7 @@ def get_config(
     EXCEL_BOOKS_DIR = REPO_DIR / "excel_books"
     SRI_DATA_DIR = EXCEL_BOOKS_DIR / "sri_data"
     ALADDIN_DATA_DIR = EXCEL_BOOKS_DIR / "aladdin_data"
+    BRS_ISSUER_DATA_DIR_PATH = ALADDIN_DATA_DIR / "snt_word_issuer_data"
     NASDAQ_DATA_DIR = EXCEL_BOOKS_DIR / "nasdaq_data"
     SUSTAINALYTICS_DATA_DIR = EXCEL_BOOKS_DIR / "sustainalytics_data"
     ESG_METRICS_MAP_DIR = SRI_DATA_DIR / "esg_metrics"
@@ -168,5 +169,6 @@ def get_config(
         "OUTPUT_DIR": OUTPUT_DIR,
         "ESG_METRICS_MAP_DIR": ESG_METRICS_MAP_DIR,
         "DOWNLOAD_DIR": DOWNLOAD_DIR,
+        "BRS_ISSUER_DATA_DIR_PATH": BRS_ISSUER_DATA_DIR_PATH,
     }
     return config
