@@ -49,7 +49,9 @@ def analyze_cross_reference(
 
     # 1. Exact duplicate rows where secondary_id is present -------------
     dup_rows = has_secondary[has_secondary.duplicated(keep=False)]
-    dup_rows.to_csv(out_dir / f"cross_brs_duplicate_full_rows_{stamp}.csv", index=False)
+    dup_rows.to_excel(
+        out_dir / f"cross_brs_duplicate_full_rows_{stamp}.xlsx", index=False
+    )
     results["duplicate_full_rows"] = dup_rows
     if logger:
         logger.info(
@@ -62,14 +64,14 @@ def analyze_cross_reference(
         .filter(lambda g: g[main_id].nunique() > 1)
         .sort_values([secondary_id, main_id])
     )
-    multi_main_per_secondary.to_csv(
-        out_dir / f"cross_brs_multiple_{main_id}_per_{secondary_id}_{stamp}.csv",
+    multi_main_per_secondary.to_excel(
+        out_dir / f"cross_brs_multiple_{main_id}_per_{secondary_id}_{stamp}.xlsx",
         index=False,
     )
     results["multiple_main_per_secondary"] = multi_main_per_secondary
     if logger:
         logger.info(
-            "Secondary IDs with >1 distinct %s: %d (rows: %d)",
+            f"{secondary_id} >1 distinct %s: %d (rows: %d)",
             main_id,
             multi_main_per_secondary[secondary_id].nunique(),
             len(multi_main_per_secondary),
@@ -81,14 +83,14 @@ def analyze_cross_reference(
         .filter(lambda g: g[secondary_id].nunique() > 1)
         .sort_values([main_id, secondary_id])
     )
-    multi_secondary_per_main.to_csv(
-        out_dir / f"cross_brs_multiple_{secondary_id}_per_{main_id}_{stamp}.csv",
+    multi_secondary_per_main.to_excel(
+        out_dir / f"cross_brs_multiple_{secondary_id}_per_{main_id}_{stamp}.xlsx",
         index=False,
     )
     results["multiple_secondary_per_main"] = multi_secondary_per_main
     if logger:
         logger.info(
-            "Primary IDs with >1 distinct %s: %d (rows: %d)",
+            f"{main_id} with >1 distinct %s: %d (rows: %d)",
             secondary_id,
             multi_secondary_per_main[main_id].nunique(),
             len(multi_secondary_per_main),
@@ -98,8 +100,8 @@ def analyze_cross_reference(
     dup_main_in_empty = no_secondary[
         no_secondary.duplicated(subset=[main_id], keep=False)
     ]
-    dup_main_in_empty.to_csv(
-        out_dir / f"empty_permid_duplicate_{main_id}_{stamp}.csv", index=False
+    dup_main_in_empty.to_excel(
+        out_dir / f"empty_permid_duplicate_{main_id}_{stamp}.xlsx", index=False
     )
     results["empty_permid_duplicate_main"] = dup_main_in_empty
     if logger:
