@@ -25,7 +25,7 @@ paths = config["paths"]
 CROSSREFERENCE_PATH = paths["CROSSREFERENCE_PATH"]
 
 # Define base directories
-base_dir = Path("C:/Users/n740789/Documents/Projects_local/DataSets")
+base_dir = Path("C:/Users/n740789/Documents/Projects_local/datasets")
 datafeed_dir = base_dir / "datafeeds/datafeeds_with_ovr"
 datafeed_path = datafeed_dir / f"{DATE}_df_issuer_level_with_ovr.csv"
 
@@ -34,7 +34,9 @@ datafeed_columns = [
     "art_8_basicos",
     "sustainability_rating",
     "str_001_s",
+    "str_002_ec",
     "str_004_asec",
+    "str_005_ec",
     "str_007_sect",
 ]
 
@@ -125,7 +127,7 @@ def analysis(
     benchmark = reorder_columns(benchmark)
     logger.info("columns sorted")
 
-    for df_name, df in zip(["portfolio", "bencmark"], [portfolio, benchmark]):
+    for df_name, df in zip(["portfolio", "benchmark"], [portfolio, benchmark]):
         len_permid_current = df["permid_current"].notna().sum()
         len_permid_new = df["permid_new"].notna().sum()
 
@@ -162,36 +164,15 @@ def process_directory(
     input_dir: str,
     output_dir: str,
     datafeed_col: list,
-    date: str,
     datafeed: pd.DataFrame,
-    crossreference: pd.DataFrame,
+    crossreference_file: pd.DataFrame,
 ):
+    output_dir = Path(output_dir)
+    # Ensure output directory exists
+    output_dir.mkdir(parents=True, exist_ok=True)
     for file in os.listdir(input_dir):
         if file.endswith(".xlsx"):
             if any(
-                portfolio_id in file
-                for portfolio_id in ["FPB01158", "FPH00457", "EPH00107"]
-            ):
-                logger.info(f"Processing {file} with str 004 instead of str 007")
-                datafeed_col = [
-                    "permid",
-                    "aladdin_id",
-                    "sustainability_rating",
-                    "str_004_asec",
-                ]
-                input_file = os.path.join(input_dir, file)
-                output_file = os.path.join(
-                    output_dir, file.replace(".xlsx", "_analysis.xlsx")
-                )
-                analysis(
-                    input_file,
-                    output_file,
-                    datafeed_col,
-                    date,
-                    datafeed,
-                    crossreference,
-                )
-            elif any(
                 portfolio_id in file
                 for portfolio_id in [
                     "FIG02787",
@@ -213,9 +194,8 @@ def process_directory(
                     input_file,
                     output_file,
                     datafeed_col,
-                    date,
                     datafeed,
-                    crossreference,
+                    crossreference_file,
                 )
             elif any(
                 portfolio_id in file
@@ -237,9 +217,8 @@ def process_directory(
                     input_file,
                     output_file,
                     datafeed_col,
-                    date,
                     datafeed,
-                    crossreference,
+                    crossreference_file,
                 )
             else:
                 input_file = os.path.join(input_dir, file)
@@ -250,9 +229,8 @@ def process_directory(
                     input_file,
                     output_file,
                     datafeed_col,
-                    date,
                     datafeed,
-                    crossreference,
+                    crossreference_file,
                 )
 
 
@@ -280,7 +258,13 @@ def main():
     )
 
     # Ensure output directories exist
-    for dir_name in ["art8_analysis", "esg_analysis", "sustainable_analysis"]:
+    for dir_name in [
+        "art8_analysis",
+        "esg_analysis",
+        "sustainable_analysis_007",
+        "sustainable_analysis_004",
+        "responsable_analysis",
+    ]:
         os.makedirs(os.path.join(output_base, dir_name), exist_ok=True)
 
     # Process Art 8 Basico
@@ -288,9 +272,8 @@ def main():
         os.path.join(input_base, "art8"),
         os.path.join(output_base, "art8_analysis"),
         ["permid", "aladdin_id", "art_8_basicos"],
-        date,
         datafeed=datafeed,
-        crossreference=crossreference,
+        crossreference_file=crossreference,
     )
 
     # Process ESG
@@ -298,29 +281,35 @@ def main():
         os.path.join(input_base, "esg"),
         os.path.join(output_base, "esg_analysis"),
         ["permid", "aladdin_id", "sustainability_rating", "str_001_s"],
-        date,
         datafeed=datafeed,
-        crossreference=crossreference,
+        crossreference_file=crossreference,
     )
 
-    # Process Sustainable
+    # Process Sustainable 007
     process_directory(
-        os.path.join(input_base, "sustainable"),
-        os.path.join(output_base, "sustainable_analysis"),
+        os.path.join(input_base, "sustainable_007"),
+        os.path.join(output_base, "sustainable_analysis_007"),
         ["permid", "aladdin_id", "sustainability_rating", "str_007_sect"],
-        date,
         datafeed=datafeed,
-        crossreference=crossreference,
+        crossreference_file=crossreference,
+    )
+
+    # Process Sustainable 004
+    process_directory(
+        os.path.join(input_base, "sustainable_004"),
+        os.path.join(output_base, "sustainable_analysis_004"),
+        ["permid", "aladdin_id", "sustainability_rating", "str_004_asec"],
+        datafeed=datafeed,
+        crossreference_file=crossreference,
     )
 
     # Process Responsable
     process_directory(
-        os.path.join(input_base, "sustainable"),
-        os.path.join(output_base, "responsable"),
+        os.path.join(input_base, "responsable"),
+        os.path.join(output_base, "responsable_analysis"),
         ["permid", "aladdin_id", "str_002_ec", "str_005_ec"],
-        date,
         datafeed=datafeed,
-        crossreference=crossreference,
+        crossreference_file=crossreference,
     )
 
     logger.info("Script completed")
