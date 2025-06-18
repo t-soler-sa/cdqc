@@ -196,26 +196,49 @@ def load_aladdin_data(file_path: Path, sheet_name: str) -> pd.DataFrame:
 
 def load_crossreference(file_path: Path) -> pd.DataFrame:
     """
-    Load crossreference data from a CSV file into a DataFrame.
+    Load cross-reference data from a CSV file into a DataFrame.
 
-    Parameters:
-        file_path (Path): Path to the CSV file containing crossreference data.
+    Parameters
+    ----------
+    file_path : Path
+        Path to the CSV file containing cross-reference data.
 
-    Returns:
-        pd.DataFrame: DataFrame with the crossreference data and columns renamed
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with cleaned / renamed columns.
     """
     logger.info("Loading crossreference data from: %s", file_path)
     try:
         df = pd.read_csv(file_path, dtype=str)
-    except Exception:
+    except Exception:  # let caller decide what to do with the traceback
         logger.exception("Failed to load crossreference data from: %s", file_path)
         raise
-    logger.info("Cleaning columns and renaming crossreference data")
+    logger.info("Successfully loaded crossreference data from: %s", file_path)
     df.columns = clean_columns(df.columns)
-    df.rename(
-        columns={"clarity_ai": "permid", "aladdin_issuer": "aladdin_id"}, inplace=True
-    )
-    logger.info("Successfully loaded crossreference from: %s", file_path)
+
+    if "permid" not in df.columns and "clarity_ai" in df.columns:
+        df.rename(columns={"clarity_ai": "permid"}, inplace=True)
+        logger.info("'PERMID' was not in columns so renamed 'clarity_ai' → 'permid'")
+
+    candidates = {"issuer", "aladdin_issuer"}
+    found = candidates & set(df.columns)
+
+    if len(found) == 2:
+        logger.warning(
+            "Both 'issuer' and 'aladdin_issuer' columns found — " "No rename performed."
+        )
+    elif len(found) == 1:
+        src = found.pop()
+        df.rename(columns={src: "aladdin_id"}, inplace=True)
+        logger.info("Renamed '%s' → 'aladdin_id'", src)
+    else:
+        logger.warning(
+            "Neither 'issuer' nor 'aladdin_issuer' column present — "
+            "'aladdin_id' will be missing."
+        )
+
+    logger.info("Finished processing crossreference data from: %s", file_path)
     return df
 
 
