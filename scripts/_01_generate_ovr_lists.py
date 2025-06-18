@@ -111,59 +111,61 @@ if need_permid_and_clid.any():
         need_permid_and_clid, "aladdin_id"
     ].map(permid_map)
 
-# second pass: permid → clarityid
-still_missing_clid = overrides_df["clarityid"].isna() & overrides_df["permid"].notna()
-overrides_df.loc[still_missing_clid, "clarityid"] = overrides_df.loc[
-    still_missing_clid, "permid"
-].map(clr_map)
+    # second pass: permid → clarityid
+    still_missing_clid = (
+        overrides_df["clarityid"].isna() & overrides_df["permid"].notna()
+    )
+    overrides_df.loc[still_missing_clid, "clarityid"] = overrides_df.loc[
+        still_missing_clid, "permid"
+    ].map(clr_map)
 
-# ── 3. final normalisation and logging ────────────────────────────────────────
-overrides_df["clarityid"] = id_to_str(overrides_df["clarityid"])  # <-- safety net
+    # ── 3. final normalisation and logging ────────────────────────────────────────
+    overrides_df["clarityid"] = id_to_str(overrides_df["clarityid"])  # <-- safety net
 
-permids_assigned_to_clarityid = {}
-no_clarityid_no_permid = {}
-no_clarityid = {}
-for _, row in overrides_df.iterrows():
-    aladdin_id = row["aladdin_id"]
-    issuer_name = row["issuer_name"]
-    claritid = row["clarityid"]
-    permid = row["permid"]
-    if aladdin_id not in (
-        permids_assigned_to_clarityid or no_clarityid_no_permid or no_clarityid
-    ):
+    permids_assigned_to_clarityid = {}
+    no_clarityid_no_permid = {}
+    no_clarityid = {}
+    for _, row in overrides_df.iterrows():
+        aladdin_id = row["aladdin_id"]
+        issuer_name = row["issuer_name"]
+        claritid = row["clarityid"]
+        permid = row["permid"]
+        if aladdin_id not in (
+            permids_assigned_to_clarityid or no_clarityid_no_permid or no_clarityid
+        ):
 
-        if pd.isna(claritid):
-            if pd.isna(permid):
-                no_clarityid_no_permid[aladdin_id] = issuer_name
+            if pd.isna(claritid):
+                if pd.isna(permid):
+                    no_clarityid_no_permid[aladdin_id] = issuer_name
 
+                else:
+                    no_clarityid[aladdin_id] = issuer_name
+            elif claritid == permid:
+                # this means that the permid was assigned to the clarityid
+                permids_assigned_to_clarityid[permid] = issuer_name
             else:
-                no_clarityid[aladdin_id] = issuer_name
-        elif claritid == permid:
-            # this means that the permid was assigned to the clarityid
-            permids_assigned_to_clarityid[permid] = issuer_name
-        else:
-            # there is a clarityid and permid and they are different so everything is fine no need to log anything
-            pass
+                # there is a clarityid and permid and they are different so everything is fine no need to log anything
+                pass
 
-for issuser_name, aladdin_id in no_clarityid_no_permid.items():
-    logger.warning(
-        f"NoClarityNoPermid | NO clarityid & NO permid for {issuser_name} - aladdin_id: {aladdin_id}"
-    )
-for issuer_name, aladdin_id in no_clarityid.items():
-    logger.warning(
-        f"NoClarity | NO clarityid for {issuer_name} - aladdin_id: {aladdin_id}) even after lookup"
-    )
+    for issuser_name, aladdin_id in no_clarityid_no_permid.items():
+        logger.warning(
+            f"NoClarityNoPermid | NO clarityid & NO permid for {issuser_name} - aladdin_id: {aladdin_id}"
+        )
+    for issuer_name, aladdin_id in no_clarityid.items():
+        logger.warning(
+            f"NoClarity | NO clarityid for {issuer_name} - aladdin_id: {aladdin_id}) even after lookup"
+        )
 
-for permid, issuer_name in permids_assigned_to_clarityid.items():
-    logger.warning(
-        f"PermidInstead | For {issuer_name} permid {permid}) was assigned instead of clarityid"
-    )
+    for permid, issuer_name in permids_assigned_to_clarityid.items():
+        logger.warning(
+            f"PermidInstead | For {issuer_name} permid {permid}) was assigned instead of clarityid"
+        )
 
-del (
-    permids_assigned_to_clarityid,
-    no_clarityid_no_permid,
-    no_clarityid,
-)  # free up memory
+    del (
+        permids_assigned_to_clarityid,
+        no_clarityid_no_permid,
+        no_clarityid,
+    )  # free up memory
 
 
 # 3. Define main function
