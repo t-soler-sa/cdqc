@@ -34,8 +34,8 @@ overrides_path = paths["OVR_PATH"]
 overrides_dir_path = overrides_path.parent
 crossreference_path = paths["CROSSREFERENCE_PATH"]
 brs_issuer_data_dir = config["BRS_ISSUER_DATA_DIR_PATH"]
-DATE_STAMP = datetime.now().strftime("%Y%m%d")
-brs_issuer_data_file: Path = brs_issuer_data_dir / f"{DATE_STAMP}_brs_issuer_data.csv"
+print(f"brs_issuer_data_dir: {brs_issuer_data_dir}")
+brs_issuer_data_file: Path = brs_issuer_data_dir / f"{DATE}_brs_issuer_data.csv"
 
 clarity_test_col = [
     "permid",
