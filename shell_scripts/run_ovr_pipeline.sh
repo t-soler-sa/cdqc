@@ -22,6 +22,8 @@ DATE=$1
 # Define the base directory
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
 
+echo "Base directory: $BASE_DIR"
+
 # Array of scripts to run
 SCRIPTS=(
     "_01_generate_ovr_lists.py"
@@ -31,7 +33,7 @@ SCRIPTS=(
 )
 
 # Activate virtual environment
-#source "${BASE_DIR}/.venv/Script/activate"
+source "${BASE_DIR}/.venv/Scripts/activate"
 
 # Execute Python scripts in sequence, passing the date parameter
 for script in "${SCRIPTS[@]}"; do
