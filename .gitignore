@@ -45,6 +45,10 @@ scripts/__pycache__/config.cpython-313.pyc
 
 scripts/utils/__pycache__
 scripts/utils/__pycache__/*
-excel_books/sri_data/ovr_lists_sambau_infinity/202505/
-excel_books/sri_data/ovr_lists_sambau_infinity/202506/
+excel_books/sri_data/ovr_lists_sambau_infinity/
 excel_books/sri_data/noncompliance/2025/
+
+excel_books/aladdin_data/snt_word_issuer_data/
+excel_books/aladdin_data/crossreference/
+excel_books/aladdin_data/crossreference/Aladdin_Clarity_Issuers_20250601.csv
+excel_books/sri_data/pre-ovr-analysis/
