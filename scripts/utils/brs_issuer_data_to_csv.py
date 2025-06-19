@@ -24,7 +24,7 @@ Usage
 -----
 Run as a module from your project root::
 
-    python -m my_package.brs_issuer_data_to_csv
+    python -m scripts.utils.brs_issuer_data_to_csv
 
 You can also import and call :pyfunc:`main` from elsewhere in your code.
 """
@@ -47,20 +47,17 @@ from .config import get_config
 # --------------------------------------------------------------------------- #
 # Configuration
 # --------------------------------------------------------------------------- #
-DATE_STAMP = datetime.now().strftime("%Y%m%d")
-DATE_STAMP_YM = datetime.now().strftime("%Y%m")
 
 CONFIG = get_config(
     "brs_issuer_data_to_csv",
-    auto_date=False,
-    fixed_date=DATE_STAMP_YM,
 )
 
 logger = CONFIG["logger"]
+DATE_STAMP_YM = CONFIG["DATE"]
 # --------------------------------------------------------------------------- #
 BASE_DIR: Path = CONFIG["BRS_ISSUER_DATA_DIR_PATH"]
-IN_FILE: Path = BASE_DIR / f"{DATE_STAMP}_snt_world_sntcor_corp_shares.xlsx"
-OUT_FILE: Path = BASE_DIR / f"{DATE_STAMP}_brs_issuer_data.csv"
+IN_FILE: Path = BASE_DIR / f"{DATE_STAMP_YM}_snt_world_sntcor_corp_shares.xlsx"
+OUT_FILE: Path = BASE_DIR / f"{DATE_STAMP_YM}_brs_issuer_data.csv"
 
 # Columns expected after the cleaning step (before aggregation)
 _INTERMEDIATE_COLS = [
@@ -146,7 +143,7 @@ def _list_or_empty(values: Sequence[str]) -> list[str]:
 def main() -> None:
     logger.info(
         "Load, clean, merge, aggregate, and export BRS issuer data for date %s.",
-        DATE_STAMP,
+        DATE_STAMP_YM,
     )
     logger.info("Loading BRS issuer data from %s", IN_FILE)
     try:
