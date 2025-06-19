@@ -146,32 +146,25 @@ def main(simple: bool = False, zombie: bool = False):
     # 1.1.  aladdin /brs data / perimeters
     logger.info("Loading BRS data")
     brs_carteras = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_carteras")
-    log_df_head_compact(brs_carteras, df_name="brs_carteras")
     brs_benchmarks = load_aladdin_data(BMK_PORTF_STR_PATH, "portfolio_benchmarks")
-    log_df_head_compact(brs_benchmarks, df_name="brs_benchmarks")
     crossreference = load_crossreference(CROSSREFERENCE_PATH)
 
     # remove duplicate and nan permid in crossreference
     logger.info("Removing duplicates and NaN values from crossreference")
     crossreference.drop_duplicates(subset=["permid"], inplace=True)
     crossreference.dropna(subset=["permid"], inplace=True)
-    log_df_head_compact(crossreference, df_name="crossreference")
 
     # get BRS data at issuer level for becnhmarks without empty aladdin_id
     brs_carteras_issuerlevel = get_issuer_level_df(brs_carteras, "aladdin_id")
-    log_df_head_compact(brs_carteras_issuerlevel, df_name="brs_carteras_issuerlevel")
     # get BRS data at issuer level for becnhmarks without empty aladdin_id
     brs_benchmarks_issuerlevel = get_issuer_level_df(brs_benchmarks, "aladdin_id")
-    log_df_head_compact(
-        brs_benchmarks_issuerlevel, df_name="brs_benchmarks_issuerlevel"
-    )
+    #   brs_benchmarks_issuerlevel, df_name="brs_benchmarks_issuerlevel"
+    # )
 
     # 1.2.  clarity data
     logger.info("Loading clarity data")
     prep_old_clarity_df = load_clarity_data(DF_PREV_PATH, columns_to_read)
-    log_df_head_compact(prep_old_clarity_df, df_name="old_clarity_df_with_overrides")
     prep_new_clarity_df = load_clarity_data(DF_NEW_PATH, columns_to_read)
-    log_df_head_compact(prep_new_clarity_df, df_name="new_clarity_df_without_overrides")
     # let's rename columns in df_1 and df_2 using the rename_dict
     prep_old_clarity_df.rename(columns=rename_dict, inplace=True)
     prep_new_clarity_df.rename(columns=rename_dict, inplace=True)
@@ -181,11 +174,9 @@ def main(simple: bool = False, zombie: bool = False):
     prep_old_clarity_df = prep_old_clarity_df.merge(
         crossreference[["permid", "aladdin_id"]], on="permid", how="left"
     )
-    log_df_head_compact(prep_old_clarity_df, df_name="old_clarity_df_with_aladdin_id")
     prep_new_clarity_df = prep_new_clarity_df.merge(
         crossreference[["permid", "aladdin_id"]], on="permid", how="left"
     )
-    log_df_head_compact(prep_new_clarity_df, df_name="new_clarity_df_with_aladdin_id")
 
     logger.info(
         f"previous clarity df's  rows: {prep_old_clarity_df.shape[0]}, new clarity df's rows: {prep_new_clarity_df.shape[0]}"
@@ -204,7 +195,7 @@ def main(simple: bool = False, zombie: bool = False):
     overrides = load_overrides(
         OVR_PATH
     )  # changed to the original one just in case for the time being
-    log_df_head_compact(overrides, df_name="overrides")
+
     # rename column brs_id to aladdin_id
     if "brs_id" in overrides.columns:
         overrides.rename(columns={"brs_id": "aladdin_id"}, inplace=True)
@@ -257,10 +248,6 @@ def main(simple: bool = False, zombie: bool = False):
     # drop isin from out_issuer_clarity and new_issuers_clarity
     out_issuer_clarity.drop(columns=["isin"], inplace=True)
     new_issuers_clarity.drop(columns=["isin"], inplace=True)
-    log_df_head_compact(prep_old_clarity_df, df_name="prep_old_clarity_df", n=10)
-    log_df_head_compact(prep_new_clarity_df, df_name="prep_new_clarity_df", n=10)
-    log_df_head_compact(out_issuer_clarity, df_name="out_issuer_clarity", n=5)
-    log_df_head_compact(new_issuers_clarity, df_name="new_issuers_clarity", n=5)
 
     # log size of new and missing issuers
     logger.info(
@@ -280,14 +267,6 @@ def main(simple: bool = False, zombie: bool = False):
     ) = prepare_dataframes(
         brs_carteras_issuerlevel, prep_new_clarity_df, target_index="aladdin_id"
     )
-    log_df_head_compact(prep_brs_df_ptf, df_name="prep_brs_df_ptf", n=10)
-    log_df_head_compact(prep_clarity_df_ptf, df_name="prep_clarity_df_ptf", n=10)
-    log_df_head_compact(
-        in_clarity_but_not_in_brs, df_name="in_clarity_but_not_in_brs", n=5
-    )
-    log_df_head_compact(
-        in_brs_but_not_in_clarity, df_name="in_brs_but_not_in_clarity", n=5
-    )
 
     # log size of new and missing issuers
     logger.info(
@@ -306,18 +285,6 @@ def main(simple: bool = False, zombie: bool = False):
         in_brs_benchmark_but_not_in_clarity,
     ) = prepare_dataframes(
         brs_benchmarks_issuerlevel, prep_new_clarity_df, target_index="aladdin_id"
-    )
-    log_df_head_compact(prep_brs_df_bmk, df_name="prep_brs_df_bmk", n=10)
-    log_df_head_compact(prep_clarity_df_bmk, df_name="prep_clarity_df_bmk", n=10)
-    log_df_head_compact(
-        in_clarity_but_not_in_brs_benchmarks,
-        df_name="in_clarity_but_not_in_brs_benchmarks",
-        n=5,
-    )
-    log_df_head_compact(
-        in_brs_benchmark_but_not_in_clarity,
-        df_name="in_brs_benchmark_but_not_in_clarity",
-        n=5,
     )
 
     # log size of new and missing issuers
@@ -519,33 +486,6 @@ def main(simple: bool = False, zombie: bool = False):
         rf"C:\Users\n740789\Downloads\{DATE}_delta_flagged.csv", index=False
     )
 
-    # logg to check dfs columns before prepping
-    logger.info(
-        "\n\n\n============DELTAS' SHAPE, COLUMNS, & HEAD  AFTER FILTERING & DROPPING=============\n\n\n"
-    )
-
-    for df_name, df in deltas_df_dict.items():
-        # temp_pathout = OUTPUT_DIR / f"{DATE}_{df_name}_UNFILTERED.xlsx"
-        # df.to_excel(temp_pathout, index=False)
-        logger.info(
-            f"{df_name}'s index:{df.index.name}, \n{df_name}'s shape {df.shape[0]} & \ncolumns:\n {df.columns.tolist()}\n\n"
-        )
-        # Temporarily override pandas display options
-        with pd.option_context(
-            "display.max_rows",
-            None,
-            "display.max_columns",
-            None,
-            "display.width",
-            None,
-            "display.max_colwidth",
-            None,
-        ):
-            log_df_head_compact(df, df_name=df_name, n=10)
-
-        # logg to check dfs columns before prepping
-    logger.info("\n\n\n==========================================\n\n\n")
-
     # 3.1.  Unpack DELTAS
     # Unpacking filtered dataframes after filtering and dropping columns
 
@@ -555,13 +495,6 @@ def main(simple: bool = False, zombie: bool = False):
     delta_in_ptf = deltas_df_dict["delta_in_ptf"].copy()
     delta_ex_bmk = deltas_df_dict["delta_ex_bmk"].copy()
     delta_in_bmk = deltas_df_dict["delta_in_bmk"].copy()
-
-    # log_df_head_compact(delta_ex_clarity, df_name="delta_exclustion_clarity", n=5)
-    # log_df_head_compact(delta_in_clarity, df_name="delta_inclusion_clarity", n=5)
-    # log_df_head_compact(delta_ex_ptf, df_name="delta_exclusion_portfolio", n=5)
-    # log_df_head_compact(delta_in_ptf, df_name="delta_inclusion_portfolio", n=5)
-    # log_df_head_compact(delta_ex_bmk, df_name="delta_exclusion_benchmark", n=5)
-    # log_df_head_compact(delta_in_bmk, df_name="delta_inclusion_benchmark", n=5)
 
     # Free space by delting the dicts and config list you are done with
     del deltas_df_dict, delta_process_config
@@ -747,55 +680,6 @@ def main(simple: bool = False, zombie: bool = False):
             final_key = f"{config['prep_config_name']}_{df_name}"
             final_dfs_dict[final_key] = df
 
-    logger.info(
-        "\n\n========== SHOW dataframes AFTER Adding Portfolio & Benchmark Information. BUT BEFORE Filtering, and Cleaning ==========\n\n"
-    )
-    for df_name, df in final_dfs_dict.items():
-
-        # logg columns for all the dfs
-        logger.info(f"Columns in {df_name}:\n {df.columns.tolist()}\n")
-        # Log if df has index and if it does the index name
-        if df.index.name:
-            logger.info(f"Index name for {df_name}: {df.index.name}")
-            logger.info(
-                f"""
-            Columns in {df_name}:\n {df.columns.tolist()}\n
-            Number of rows in {df_name}: {df.shape[0]}\n
-            """
-            )
-            # Temporarily override pandas display options
-            with pd.option_context(
-                "display.max_rows",
-                None,
-                "display.max_columns",
-                None,
-                "display.width",
-                None,
-                "display.max_colwidth",
-                None,
-            ):
-                log_df_head_compact(df, df_name=df_name, n=10)
-
-        else:
-            logger.info(
-                f"""
-            Columns in {df_name}:\n {df.columns.tolist()}\n
-            Number of rows in {df_name}: {df.shape[0]}\n
-            """
-            )
-            # Temporarily override pandas display options
-            with pd.option_context(
-                "display.max_rows",
-                None,
-                "display.max_columns",
-                None,
-                "display.width",
-                None,
-                "display.max_colwidth",
-                None,
-            ):
-                log_df_head_compact(df, df_name=df_name, n=10)
-
     logger.info("\n\n================================================\n\n")
 
     # 5.    FILTERING & CLEANING DELTAS
@@ -952,63 +836,6 @@ def main(simple: bool = False, zombie: bool = False):
             final_key = f"{config['prep_config_name']}_{df_name}"
             final_dfs_dict[final_key] = df
 
-    # DEBUG LOGGING - REMOVE LATER - LET'S CHECK HOW THE DATA LOOKS LIKE
-    logger.info(
-        "\n\n========== SHOW dataframes AFTER Adding Portfolio & Benchmark Information & Filtering, and Cleaning ==========\n\n"
-    )
-    for df_name, df in final_dfs_dict.items():
-
-        # logg columns for all the dfs
-        logger.info(
-            f"""
-        Columns in {df_name}:\n {df.columns.tolist()}\n
-        Number of rows in {df_name}: {df.shape[0]}\n
-        """
-        )
-        # Log if df has index and if it does the index name
-        if df.index.name:
-            logger.info(f"Index name for {df_name}: {df.index.name}")
-            logger.info(
-                f"""
-            Columns in {df_name}:\n {df.columns.tolist()}\n
-            Number of rows in {df_name}: {df.shape[0]}\n
-            """
-            )
-            # Temporarily override pandas display options
-            with pd.option_context(
-                "display.max_rows",
-                None,
-                "display.max_columns",
-                None,
-                "display.width",
-                None,
-                "display.max_colwidth",
-                None,
-            ):
-                log_df_head_compact(df, df_name=df_name, n=10)
-
-        else:
-            logger.info(
-                f"""
-            Columns in {df_name}:\n {df.columns.tolist()}\n
-            Number of rows in {df_name}: {df.shape[0]}\n
-            """
-            )
-            # Temporarily override pandas display options
-            with pd.option_context(
-                "display.max_rows",
-                None,
-                "display.max_columns",
-                None,
-                "display.width",
-                None,
-                "display.max_colwidth",
-                None,
-            ):
-                log_df_head_compact(df, df_name=df_name, n=10)
-
-    logger.info("\n\n================================================\n\n")
-
     # Unpack cleaned DataFrames using original names
     delta_ex_clarity = final_dfs_dict["clarity_deltas_exclusion_df"].copy()
     delta_in_clarity = final_dfs_dict["clarity_deltas_inclusion_df"].copy()
@@ -1144,7 +971,7 @@ def main(simple: bool = False, zombie: bool = False):
                     if maybe_df.empty:
                         logger.info(f"{df_name} is empty, skipping.")
                     else:
-                        log_df_head_compact(maybe_df, df_name=df_name, n=5)
+                        pass
                 else:
                     logger.warning(
                         f"{df_name} is not a DataFrame: {type(maybe_df).__name__}"
@@ -1158,7 +985,6 @@ def main(simple: bool = False, zombie: bool = False):
         logger.info(f"\nSaved dfs_dict to {OUTPUT_DIR}/{DATE}_preovr_analysis.xlsx\n")
 
     else:
-        log_df_head_compact(df, df_name=f"{DATE}_preovr_analysis", n=5)
         save_excel(dfs_dict, OUTPUT_DIR, file_name=f"{DATE}_preovr_analysis")
         logger.info(f"\nSaved dfs_dict to {OUTPUT_DIR}/{DATE}_preovr_analysis.xlsx\n")
 
